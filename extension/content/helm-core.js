@@ -185,7 +185,7 @@
   };
 
   /* ---------- Claude orchestrator (via background) ---------- */
-  H.askClaude = async function ({ command, elements, recent, screen, viewportSummary }) {
+  H.askClaude = async function ({ command, elements, recent, screen, viewportSummary, selectedText }) {
     const system = `You are Helm, an AI cursor inside a browser. The user has spoken a command.
 Respond with a JSON object describing what to do. No prose, no markdown, just JSON.
 
@@ -214,6 +214,12 @@ Rules:
 - DO NOT set 'speak' unless the user EXPLICITLY asked Helm to say/tell something verbally. The cursor moving is confirmation — never narrate.
 - Be concise. Be confident.
 
+Selected text:
+- If "Selected text" is provided below, the user has highlighted something on the page.
+- Commands like "explain that", "translate this", "define that", "summarize the selection", "what does this mean" refer to the selected text.
+- For those commands: set 'speak' to your answer about the selected text, leave 'actions' empty.
+- For "search for that" or "look up that": use the selected text as the search query.
+
 Link navigation:
 - Element labels include a destination hint like '→ /path' (same site) or '→ example.com' (external). Use 'click' on the matching link element to navigate.
 - If the user says 'go to', 'open', 'visit', or 'click [name]', find the best matching link or button and click it.
@@ -232,8 +238,9 @@ Search and typing:
     const recentList = recent.length ? `\nRecent actions: ${recent.slice(-6).join(" → ")}` : "";
     const screenLine = screen ? `\nPage: ${screen}` : "";
     const summary = viewportSummary ? `\nVisible content:\n${viewportSummary}` : "";
+    const selLine = selectedText ? `\nSelected text: "${selectedText.slice(0, 500)}"` : "";
 
-    const userText = `Command: "${command}"${screenLine}${summary}\n\nAvailable elements (id : label):\n${elementsList}${recentList}\n\nReturn JSON only.`;
+    const userText = `Command: "${command}"${screenLine}${selLine}${summary}\n\nAvailable elements (id : label):\n${elementsList}${recentList}\n\nReturn JSON only.`;
 
     // Build message content — add screenshot when vision is enabled
     let userContent = userText;

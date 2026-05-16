@@ -53,7 +53,7 @@
 
   "web_accessible_resources": [
     {
-      "resources": ["content/helm.css", "icons/*"],
+      "resources": ["content/helm.css", "icons/*", "onboarding/onboarding.html"],
       "matches": ["<all_urls>"]
     }
   ]

@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Welcome to Helm</title>
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #0f1115;
+    --paper: #fbf9f5;
+    --accent: #ff8a3d;
+    --accent-soft: #ffb27a;
+    --mute: rgba(251,249,245,0.55);
+    --line: rgba(255,255,255,0.08);
+    --font: "General Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    background:
+      radial-gradient(1200px 600px at 30% 10%, rgba(255,138,61,0.07), transparent 60%),
+      radial-gradient(900px 700px at 80% 90%, rgba(120,140,255,0.04), transparent 60%),
+      #07080a;
+    color: var(--paper);
+    font: 400 15px/1.6 var(--font);
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px 24px;
+  }
+
+  .card {
+    max-width: 520px;
+    width: 100%;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 44px 48px;
+  }
+
+  .logo {
+    width: 48px; height: 48px;
+    background: radial-gradient(circle at 35% 35%, #fff 0%, var(--accent) 60%, rgba(255,138,61,0.4) 100%);
+    border-radius: 50%;
+    box-shadow: 0 0 28px rgba(255,138,61,0.5);
+    margin-bottom: 24px;
+  }
+
+  h1 { font: 700 28px/1.1 var(--font); margin: 0 0 6px; letter-spacing: -0.02em; }
+  .sub { color: var(--mute); font-size: 14px; margin-bottom: 32px; }
+
+  /* Steps */
+  .step { display: none; }
+  .step.active { display: block; }
+
+  .features { list-style: none; margin: 0 0 28px; padding: 0; }
+  .features li {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: flex-start; gap: 12px;
+    font-size: 14px;
+  }
+  .features li:last-child { border-bottom: 0; }
+  .feat-icon {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: rgba(255,138,61,0.12);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex: none;
+  }
+  .feat-body .feat-title { font-weight: 600; font-size: 13.5px; }
+  .feat-body .feat-desc { color: var(--mute); font-size: 12.5px; }
+
+  label { display: block; font: 500 12px var(--font); color: var(--mute); margin-bottom: 6px; }
+  .input {
+    appearance: none; border: 1px solid var(--line);
+    background: rgba(255,255,255,0.03); color: var(--paper);
+    font: 500 14px var(--font);
+    padding: 10px 14px;
+    border-radius: 10px;
+    outline: 0;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+  .input:focus { border-color: var(--accent); background: rgba(255,138,61,0.05); }
+  .field-desc { font-size: 12px; color: rgba(251,249,245,0.38); margin-bottom: 20px; }
+  .field-desc a { color: var(--accent); }
+
+  .select {
+    appearance: none; border: 1px solid var(--line);
+    background: rgba(255,255,255,0.03); color: var(--paper);
+    font: 500 14px var(--font);
+    padding: 10px 14px;
+    border-radius: 10px;
+    outline: 0;
+    width: 100%;
+    margin-bottom: 20px;
+  }
+  .select:focus { border-color: var(--accent); }
+
+  .btn {
+    appearance: none; border: none;
+    background: var(--accent); color: #1a0f00;
+    font: 700 14px var(--font);
+    padding: 12px 28px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 150ms;
+    width: 100%;
+  }
+  .btn:hover { background: var(--accent-soft); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn.ghost {
+    background: rgba(255,255,255,0.06);
+    color: var(--paper);
+    border: 1px solid var(--line);
+    font-weight: 600;
+    margin-top: 10px;
+  }
+  .btn.ghost:hover { background: rgba(255,255,255,0.10); }
+
+  .status {
+    font-size: 12.5px; min-height: 20px; margin-bottom: 14px;
+    transition: color 200ms;
+  }
+  .status.ok  { color: #4ade80; }
+  .status.err { color: #f87171; }
+
+  .step-dots { display: flex; gap: 6px; margin-bottom: 28px; }
+  .step-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    transition: background 250ms, width 250ms;
+  }
+  .step-dot.active { background: var(--accent); width: 18px; border-radius: 3px; }
+
+  /* Done step */
+  .done-wake {
+    font: 700 32px/1 var(--font);
+    color: var(--accent);
+    margin: 16px 0 8px;
+    letter-spacing: -0.02em;
+  }
+  .done-hint { color: var(--mute); font-size: 13.5px; margin-bottom: 28px; }
+  .kbd {
+    display: inline-block;
+    padding: 2px 8px; border-radius: 5px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.14);
+    font: 600 12px ui-monospace, monospace;
+    color: var(--paper);
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo"></div>
+
+  <div class="step-dots" id="dots">
+    <div class="step-dot active" id="dot0"></div>
+    <div class="step-dot" id="dot1"></div>
+    <div class="step-dot" id="dot2"></div>
+  </div>
+
+  <!-- Step 0: Welcome -->
+  <div class="step active" id="step0">
+    <h1>Welcome to Helm</h1>
+    <p class="sub">A cursor you talk to. Works on every tab, no setup needed beyond an API key.</p>
+    <ul class="features">
+      <li>
+        <div class="feat-icon">🎙️</div>
+        <div class="feat-body">
+          <div class="feat-title">Voice commands</div>
+          <div class="feat-desc">Say the wake word then tell Helm what to do — click, scroll, type, navigate.</div>
+        </div>
+      </li>
+      <li>
+        <div class="feat-icon">🤖</div>
+        <div class="feat-body">
+          <div class="feat-title">AI-powered</div>
+          <div class="feat-desc">Understands natural language. Ask it to explain selected text, summarize the page, search for something.</div>
+        </div>
+      </li>
+      <li>
+        <div class="feat-icon">🔒</div>
+        <div class="feat-body">
+          <div class="feat-title">Private</div>
+          <div class="feat-desc">Voice runs entirely in Chrome. Only your command + page elements are sent to Anthropic.</div>
+        </div>
+      </li>
+    </ul>
+    <button class="btn" id="startBtn">Get started →</button>
+  </div>
+
+  <!-- Step 1: API Key -->
+  <div class="step" id="step1">
+    <h1>Add your API key</h1>
+    <p class="sub">Helm uses Anthropic's Claude to understand your commands. Your key is stored locally and only sent to api.anthropic.com.</p>
+    <label for="apiKey">Anthropic API key</label>
+    <input class="input" type="password" id="apiKey" placeholder="sk-ant-api03-…" autocomplete="off" />
+    <p class="field-desc">Get one free at <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a></p>
+    <div class="status" id="keyStatus"></div>
+    <button class="btn" id="verifyBtn">Verify & continue</button>
+  </div>
+
+  <!-- Step 2: Wake word -->
+  <div class="step" id="step2">
+    <h1>Choose your wake word</h1>
+    <p class="sub">This is what you'll say to get Helm's attention before giving a command.</p>
+    <label for="wakeWord">Wake word</label>
+    <select class="select" id="wakeWord">
+      <option value="yo">"yo" — short and punchy</option>
+      <option value="helm">"helm" — the extension name</option>
+      <option value="okay">"okay" — familiar</option>
+      <option value="hey">"hey there" — conversational</option>
+      <option value="computer">"computer" — classic sci-fi</option>
+    </select>
+    <button class="btn" id="finishBtn">Finish setup</button>
+    <button class="btn ghost" id="skipWakeBtn">Skip, use default ("yo")</button>
+  </div>
+
+  <!-- Step 3: Done -->
+  <div class="step" id="step3">
+    <h1>You're all set!</h1>
+    <p class="sub">Helm is ready. Switch to any tab and say:</p>
+    <div class="done-wake" id="doneWake">"yo"</div>
+    <p class="done-hint">…then tell it what to do. Try <span class="kbd">yo, scroll down</span> or <span class="kbd">yo, summarize this page</span>.</p>
+    <button class="btn" id="closeBtn">Start browsing</button>
+  </div>
+</div>
+
+<script src="onboarding.js"></script>
+</body>
+</html>

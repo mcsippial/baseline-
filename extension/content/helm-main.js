@@ -267,6 +267,7 @@
     { re: /\b(reset\s+zoom|zoom\s+reset|zoom\s+normal)\b/i,       fn: () => { document.body.style.zoom = ""; } },
   ];
   const SUMMARIZE_RE = /\b(summarize|give\s+me\s+a\s+summary|what'?s?\s+on\s+this\s+page|explain\s+this\s+page|what\s+(does\s+this|is\s+this)\s+(page\s+)?(say|about|do)|describe\s+this\s+page|what\s+is\s+this\s+(page\s+)?about)\b/i;
+  const SELECTION_READ_RE = /\b(read\s+(that|this|the\s+selection|selected\s+text|what\s+(i|you)'?ve?\s+selected)|read\s+what'?s?\s+selected)\b/i;
 
   function tryOfflineCommand(text) {
     for (const { re, fn } of OFFLINE) {
@@ -373,11 +374,24 @@
     const clean = text.trim().replace(/[.!?]+$/, "");
     if (!clean) { H.update({ mode: "idle", liveHeard: "" }); return; }
 
+    // Capture any text the user has highlighted on the page at the moment they spoke
+    const selectedText = window.getSelection()?.toString().trim() || "";
+
     // Log every non-empty command to history (fire-and-forget)
     chrome.storage.local.get("helm.history", (r) => {
       const h = r["helm.history"] || [];
       chrome.storage.local.set({ "helm.history": [...h, { text: clean, ts: Date.now() }].slice(-10) });
     });
+
+    // Read selected text aloud — instant, no API call
+    if (SELECTION_READ_RE.test(clean) && selectedText) {
+      H.update({ mode: "speaking", committedCommand: clean });
+      showSaid(selectedText.slice(0, 200));
+      await H.speak(selectedText.slice(0, 600));
+      armFollowup();
+      setTimeout(() => H.update({ committedCommand: "", mode: "idle" }), 500);
+      return;
+    }
 
     // Offline commands — instant, no API call
     if (tryOfflineCommand(clean)) {
@@ -418,6 +432,7 @@
       recent,
       screen: H.getScreenLabel(),
       viewportSummary: H.summarizeViewport(),
+      selectedText,
     });
 
     H.update({ helmThought: plan.thought || "" });
@@ -449,7 +464,9 @@
     }
     if (plan.speak) {
       showSaid(plan.speak);
-      if (H.settings?.voiceReplies) { H.update({ mode: "speaking" }); await H.speak(plan.speak); }
+      // Always speak if actions were empty (selection/explain queries are voice-first)
+      const speakAloud = H.settings?.voiceReplies || plan.actions.length === 0;
+      if (speakAloud) { H.update({ mode: "speaking" }); await H.speak(plan.speak); }
     }
     armFollowup();
     setTimeout(() => H.update({ committedCommand: "", helmThought: "" }), 3000);

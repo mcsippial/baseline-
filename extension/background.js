@@ -188,7 +188,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-// First-install: open options so user can paste their API key.
+// First-install: open onboarding wizard so user can paste their API key and choose wake word.
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") {
     chrome.storage.local.set({
@@ -202,7 +202,7 @@ chrome.runtime.onInstalled.addListener((details) => {
       useVision: false,
       "helm.usage": { input: 0, output: 0, calls: 0 },
     });
-    chrome.runtime.openOptionsPage();
+    chrome.tabs.create({ url: chrome.runtime.getURL("onboarding/onboarding.html") });
   }
 });
 
