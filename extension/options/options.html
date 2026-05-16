@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Helm — Settings</title>
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #0f1115;
+    --paper: #fbf9f5;
+    --accent: #ff8a3d;
+    --accent-soft: #ffb27a;
+    --mute: rgba(251,249,245,0.55);
+    --line: rgba(255,255,255,0.08);
+    --font: "General Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    background:
+      radial-gradient(1200px 600px at 30% 10%, rgba(255,138,61,0.06), transparent 60%),
+      radial-gradient(900px 700px at 80% 90%, rgba(120,140,255,0.04), transparent 60%),
+      #07080a;
+    color: var(--paper);
+    font: 400 14px/1.55 var(--font);
+    min-height: 100vh;
+    padding: 64px 24px 80px 24px;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  .head { display: flex; align-items: center; gap: 14px; margin-bottom: 36px; }
+  .logo {
+    width: 36px; height: 36px;
+    background: radial-gradient(circle at 35% 35%, #fff 0%, var(--accent) 60%, rgba(255,138,61,0.4) 100%);
+    border-radius: 50%;
+    box-shadow: 0 0 20px rgba(255,138,61, 0.5);
+  }
+  h1 { font: 700 24px/1.1 var(--font); margin: 0; letter-spacing: -0.01em; }
+  .ver { color: var(--mute); font-size: 12px; margin-top: 2px; }
+
+  .section {
+    background: rgba(255,255,255,0.025);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 22px 24px;
+    margin-bottom: 18px;
+  }
+  .section h2 { font: 600 13px var(--font); margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); }
+  .section .hint { color: var(--mute); font-size: 12px; margin-bottom: 18px; }
+
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label { font: 500 12px var(--font); color: var(--mute); }
+  .field .desc { font-size: 11.5px; color: rgba(251,249,245,0.4); margin-top: 2px; }
+
+  .input, .select {
+    appearance: none; border: 1px solid var(--line);
+    background: rgba(255,255,255,0.03); color: var(--paper);
+    font: 500 13px var(--font);
+    padding: 9px 12px;
+    border-radius: 10px;
+    outline: 0;
+  }
+  .input:focus, .select:focus { border-color: var(--accent); background: rgba(255,138,61,0.05); }
+
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px dashed rgba(255,255,255,0.04); }
+  .row:last-child { border-bottom: 0; }
+  .row .l { font: 500 13.5px var(--font); }
+  .row .l .d { color: var(--mute); font-size: 12px; margin-top: 2px; font-weight: 400; }
+
+  /* Toggle */
+  .toggle {
+    appearance: none; border: 0; padding: 0; cursor: pointer;
+    width: 38px; height: 22px; border-radius: 999px;
+    background: rgba(255,255,255,0.10);
+    position: relative; transition: background 150ms;
+    flex: none;
+  }
+  .toggle::after {
+    content: ""; position: absolute; top: 2px; left: 2px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #fff;
+    transition: transform 180ms;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle.on::after { transform: translateX(16px); }
+
+  /* Slider */
+  .sliderRow { display: flex; align-items: center; gap: 12px; }
+  .sliderRow input[type=range] {
+    flex: 1;
+    accent-color: var(--accent);
+  }
+  .sliderVal { font-variant-numeric: tabular-nums; color: var(--paper); font-size: 13px; min-width: 36px; text-align: right; }
+
+  .saved {
+    color: var(--accent); font: 600 11px var(--font); margin-left: 8px;
+    opacity: 0; transition: opacity 180ms;
+  }
+  .saved.show { opacity: 1; }
+
+  .keyrow { display: flex; gap: 10px; align-items: stretch; }
+  .keyrow .input { flex: 1; }
+  .btn {
+    appearance: none; border: 1px solid var(--line); background: rgba(255,255,255,0.04);
+    color: var(--paper); font: 600 12px var(--font);
+    padding: 0 14px; border-radius: 10px; cursor: pointer;
+  }
+  .btn.primary { background: var(--accent); color: #1a0f00; border-color: transparent; }
+  .btn.primary:hover { background: var(--accent-soft); }
+
+  .footer { color: var(--mute); font-size: 12px; line-height: 1.6; margin-top: 30px; }
+  .footer a { color: var(--accent); }
+  .footer code {
+    background: rgba(255,255,255,0.06); padding: 1px 6px;
+    border-radius: 4px; font: 500 11.5px ui-monospace, monospace;
+  }
+  .badge {
+    display: inline-block;
+    padding: 1px 8px; border-radius: 999px;
+    background: rgba(255,138,61,0.18); color: var(--accent);
+    font: 600 10px var(--font); text-transform: uppercase; letter-spacing: 0.08em;
+    margin-left: 6px;
+  }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <div class="logo"></div>
+    <div>
+      <h1>Helm</h1>
+      <div class="ver">A cursor you talk to · v0.1.0</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Anthropic API key</h2>
+    <p class="hint">Helm uses your Anthropic API to understand commands. The key is stored locally in this browser and never sent anywhere except api.anthropic.com.</p>
+    <div class="field">
+      <div class="keyrow">
+        <input class="input" type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off" />
+        <button class="btn primary" id="saveKey">Save</button>
+      </div>
+      <div class="desc">Get one at <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color: var(--accent)">console.anthropic.com</a></div>
+    </div>
+    <div class="field">
+      <label>Model</label>
+      <select class="select" id="model">
+        <option value="claude-haiku-4-5">Claude Haiku 4.5 — fast, recommended</option>
+        <option value="claude-sonnet-4-5">Claude Sonnet 4.5 — smarter, slower</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Wake word</h2>
+    <p class="hint">What you say to get Helm's attention. Pick something easy and unique-sounding.</p>
+    <div class="grid2">
+      <div class="field">
+        <label>Word</label>
+        <select class="select" id="wakeWord">
+          <option value="yo">"yo"</option>
+          <option value="helm">"helm"</option>
+          <option value="okay">"okay"</option>
+          <option value="hey">"hey there"</option>
+          <option value="computer">"computer"</option>
+          <option value="custom">Custom…</option>
+        </select>
+      </div>
+      <div class="field" id="customWakeField" hidden>
+        <label>Custom word</label>
+        <input class="input" id="customWake" placeholder="e.g. mango" />
+      </div>
+    </div>
+    <div class="row">
+      <div class="l">Open mic mode <span class="badge">Power</span>
+        <div class="d">Every utterance is a command — no wake word. For hands-free focus sessions.</div>
+      </div>
+      <button class="toggle" id="openMic" aria-label="Open mic"></button>
+    </div>
+    <div class="row">
+      <div class="l">Follow-up window
+        <div class="d">After a command, accept the next utterance without the wake word, for this many seconds.</div>
+      </div>
+      <div class="sliderRow" style="width: 220px">
+        <input type="range" id="followupSeconds" min="0" max="20" step="1" />
+        <span class="sliderVal" id="followupSecondsVal">8s</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Personality</h2>
+    <p class="hint">How Helm presents itself on the page.</p>
+    <div class="field">
+      <label>Cursor</label>
+      <select class="select" id="personality">
+        <option value="subtle">Subtle — small core, gentle motion</option>
+        <option value="expressive">Expressive — bigger glow, more emotive</option>
+      </select>
+    </div>
+    <div class="row">
+      <div class="l">Voice replies
+        <div class="d">Helm speaks back. Off by default; <code>read</code> commands always speak.</div>
+      </div>
+      <button class="toggle" id="voiceReplies"></button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>About</h2>
+    <p class="hint" style="margin-bottom: 0">
+      Helm listens on the page you're viewing — when it hears the wake word, it sends what you said (plus a short description of clickable things on the page) to Anthropic's API. Voice transcription runs locally in Chrome. Nothing is stored on a server.
+    </p>
+  </div>
+
+  <p class="footer">
+    Toggle the extension on/off any time from its icon. To unload entirely, remove it from <code>chrome://extensions</code>. Your settings and API key live in this browser's local storage.
+  </p>
+</div>
+
+<script src="options.js"></script>
+</body>
+</html>

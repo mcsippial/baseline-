@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Helm</title>
+<style>
+  :root {
+    --ink: #0f1115;
+    --paper: #fbf9f5;
+    --accent: #ff8a3d;
+    --line: rgba(255,255,255,0.08);
+    --mute: rgba(251,249,245,0.55);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 320px;
+    background: #0a0c10;
+    color: var(--paper);
+    font: 500 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    padding: 18px;
+  }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .head {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 14px;
+  }
+  .logo {
+    width: 24px; height: 24px;
+    background: radial-gradient(circle at 35% 35%, #fff 0%, var(--accent) 60%, rgba(255,138,61,0.4) 100%);
+    border-radius: 50%;
+    box-shadow: 0 0 12px rgba(255,138,61, 0.5);
+  }
+  .head h1 { font: 700 16px var(--font); margin: 0; letter-spacing: -0.01em; }
+  .head .ver { color: var(--mute); font-size: 11px; }
+
+  .state {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
+  .state.is-live { border-color: rgba(255,138,61,0.45); background: rgba(255,138,61,0.08); }
+  .state-label { font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .state-value { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #6a6358; flex: none; }
+  .state.is-live .dot { background: var(--accent); box-shadow: 0 0 12px var(--accent); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.25); } }
+
+  .btn {
+    appearance: none; border: 1px solid var(--line);
+    background: rgba(255,255,255,0.04);
+    color: var(--paper);
+    font: 600 13px inherit;
+    padding: 9px 14px;
+    border-radius: 999px;
+    width: 100%;
+    cursor: pointer;
+    transition: background 150ms, border-color 150ms;
+  }
+  .btn:hover { background: rgba(255,255,255,0.08); }
+  .btn.primary {
+    background: var(--accent); color: #1a0f00; border-color: transparent; font-weight: 700;
+  }
+  .btn.primary:hover { background: #ffb27a; }
+  .btn + .btn { margin-top: 8px; }
+
+  .footer {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11.5px;
+  }
+  .link {
+    color: var(--mute); cursor: pointer; background: none; border: 0; padding: 0;
+    font: 500 11.5px inherit; text-decoration: none;
+  }
+  .link:hover { color: var(--paper); }
+
+  .kbd {
+    display: inline-block;
+    padding: 1px 6px; border-radius: 4px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.14);
+    font: 600 10px ui-monospace, monospace;
+    color: var(--paper);
+  }
+
+  .warn {
+    background: rgba(255,138,61,0.10);
+    border: 1px solid rgba(255,138,61,0.35);
+    color: var(--paper);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 12px;
+    margin-bottom: 12px;
+    line-height: 1.45;
+  }
+  .warn b { color: var(--accent); }
+  .warn[hidden] { display: none; }
+</style>
+</head>
+<body>
+  <div class="head">
+    <div class="logo"></div>
+    <div>
+      <h1>Helm</h1>
+      <div class="ver">v0.1.0</div>
+    </div>
+  </div>
+
+  <div class="warn" id="warn" hidden>
+    <b>Add your API key</b><br />
+    Helm needs your Anthropic API key to understand commands. Open Settings to paste it.
+  </div>
+
+  <div class="state" id="state">
+    <div class="state-label">Status</div>
+    <div class="state-value"><span class="dot" id="dot"></span><span id="status">Disabled on this page</span></div>
+  </div>
+
+  <button class="btn primary" id="toggle">Turn Helm on</button>
+  <button class="btn" id="openSettings">Settings</button>
+
+  <div class="footer">
+    <span style="color: var(--mute)">Say <span class="kbd" id="wakeKbd">"yo"</span> on any page</span>
+    <button class="link" id="aboutLink">About</button>
+  </div>
+
+<script src="popup.js"></script>
+</body>
+</html>
