@@ -21,6 +21,7 @@
     settings: null,
     recognizer: null,
     wantListening: false,
+    sessionActive: false,  // true after first wake word — no wake word needed until Stop is clicked
     captureBuf: "",
     captureUntil: 0,
     aiDriving: false,
@@ -146,6 +147,7 @@
 
   H.stopAll = function () {
     H.wantListening = false;
+    H.sessionActive = false;
     try { H.recognizer?.stop(); } catch {}
     H.update({ mode: "offline" });
   };

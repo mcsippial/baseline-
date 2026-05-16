@@ -153,17 +153,21 @@
         ? liveHeard
         : (s.openMic
             ? "open mic"
-            : followupRemaining > 0
-              ? `${followupRemaining}s`
-              : `say "${wakeWordLabel()}"`);
+            : H.sessionActive
+              ? "ready"
+              : followupRemaining > 0
+                ? `${followupRemaining}s`
+                : `say "${wakeWordLabel()}"`);
 
       orbBtn.title = !recOk
         ? (lastError ? `Mic: ${lastError}` : "Starting mic…")
         : s.openMic
           ? "Open mic · click to turn off"
-          : followupRemaining > 0
-            ? `Follow-up · ${followupRemaining}s · click to stop`
-            : `Listening for "${wakeWordLabel()}" · click to stop`;
+          : H.sessionActive
+            ? "Session active — just speak · click to stop"
+            : followupRemaining > 0
+              ? `Follow-up · ${followupRemaining}s · click to stop`
+              : `Listening for "${wakeWordLabel()}" · click to stop`;
     }
 
     // Said pill
@@ -310,6 +314,7 @@
 
   /* ---------- Speech handlers ---------- */
   function armCommandCapture(reason) {
+    H.sessionActive = true; // first wake word activates session — no wake word needed until Stop
     H.captureBuf = "";
     H.update({ transcript: "", mode: "listening" });
     resetListenTimer();
@@ -348,6 +353,18 @@
     if (s.openMic) {
       const clean = text.trim();
       if (clean.split(/\s+/).filter(Boolean).length >= 2) commitCommand(clean);
+      return;
+    }
+
+    // Session mode: wake word already said this session — accept commands freely
+    if (H.sessionActive) {
+      const busy = H.state.mode === "thinking" || H.state.mode === "acting" || H.state.mode === "speaking";
+      if (busy) return; // drop while working, don't queue up
+      const clean = text.trim();
+      // Still ignore very short fragments (filled pauses, background noise)
+      if (clean.split(/\s+/).filter(Boolean).length >= 2) {
+        commitCommand(clean);
+      }
       return;
     }
 
@@ -477,8 +494,9 @@
 
   function armFollowup() {
     const s = H.settings || {};
-    if (s.openMic) { H.update({ mode: "idle" }); return; }
-    const seconds = typeof s.followupSeconds === "number" ? s.followupSeconds : 8;
+    // In session mode, just go idle — no timer needed, next utterance always accepted
+    if (H.sessionActive || s.openMic) { H.update({ mode: "idle" }); return; }
+    const seconds = typeof s.followupSeconds === "number" ? s.followupSeconds : 15;
     if (seconds <= 0) { H.update({ mode: "idle" }); return; }
     const until = Date.now() + seconds * 1000;
     H.state.followupUntil = until;
@@ -502,7 +520,7 @@
   H.showSaid = showSaid;
 
   /* ---------- UI events ---------- */
-  enableBtn.addEventListener("click", () => H.requestMicAndStart());
+  enableBtn.addEventListener("click", () => { H.sessionActive = true; H.requestMicAndStart(); });
   orbBtn.addEventListener("click", () => H.stopAll());
   saidX.addEventListener("click", () => H.update({ saidText: "" }));
   textcmdEl.addEventListener("submit", (e) => {
