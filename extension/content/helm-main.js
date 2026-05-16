@@ -306,11 +306,16 @@
     return true;
   }
 
+  const LISTEN_MS = 9000; // max silence window before committing
+
   /* ---------- Speech handlers ---------- */
   function armCommandCapture(reason) {
     H.captureBuf = "";
-    H.captureUntil = Date.now() + 6000;
     H.update({ transcript: "", mode: "listening" });
+    resetListenTimer();
+  }
+
+  function resetListenTimer() {
     if (listenTimer) clearTimeout(listenTimer);
     listenTimer = setTimeout(() => {
       if (H.state.mode !== "listening") return;
@@ -319,7 +324,7 @@
       } else {
         H.update({ mode: "idle", transcript: "", liveHeard: "" });
       }
-    }, 6000);
+    }, LISTEN_MS);
   }
 
   H.handleFinal = function (text) {
@@ -359,9 +364,7 @@
       if (H.state.mode === "listening") {
         H.captureBuf += " " + text;
         H.update({ transcript: H.captureBuf.trim() });
-        if (Date.now() > H.captureUntil && H.captureBuf.trim().length > 0) {
-          commitCommand(H.captureBuf.trim());
-        }
+        resetListenTimer(); // heard a word — extend the silence window
       }
       return;
     }

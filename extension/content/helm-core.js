@@ -110,15 +110,20 @@
       },
       onFinal: H.handleFinal,
       onError: (e) => {
-        if (e?.error && e.error !== "no-speech" && e.error !== "aborted") {
+        if (!e?.error || e.error === "no-speech" || e.error === "aborted") return;
+        if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+          H.wantListening = false;
+          H.update({ lastError: "mic-blocked", recOk: false, mode: "offline" });
+        } else {
           H.update({ lastError: e.error, recOk: false });
         }
       },
       onStart: () => H.update({ recOk: true, lastError: "" }),
       onEnd: () => {
         H.update({ recOk: false });
-        if (H.wantListening && H.recognizer === rec) {
-          setTimeout(() => { try { rec.start(); } catch {} }, 100);
+        // Create a fresh recognizer instance — reusing the same rec is unreliable in Chrome
+        if (H.wantListening) {
+          setTimeout(() => { if (H.wantListening) H.startRecognizer(); }, 200);
         }
       },
     });
@@ -130,14 +135,10 @@
     try { rec.start(); } catch {}
   };
 
-  H.requestMicAndStart = async function () {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(t => t.stop());
-    } catch (e) {
-      H.update({ mode: "offline", lastError: "mic-blocked" });
-      return;
-    }
+  H.requestMicAndStart = function () {
+    // Don't gate on getUserMedia — it requires per-origin permission and blocks
+    // Helm on every new domain. SpeechRecognition handles its own mic permission
+    // and fires onerror("not-allowed") if the user denies it.
     H.wantListening = true;
     H.update({ mode: "idle", lastError: "" });
     H.startRecognizer();

@@ -20,7 +20,7 @@ async function getSettings() {
     openMic: !!out.openMic,
     voiceReplies: !!out.voiceReplies,
     personality: out.personality || "subtle",
-    followupSeconds: typeof out.followupSeconds === "number" ? out.followupSeconds : 8,
+    followupSeconds: typeof out.followupSeconds === "number" ? out.followupSeconds : 15,
     enabled: out.enabled !== false,
     micLang: out.micLang || "en-US",
     useVision: !!out.useVision,
@@ -194,7 +194,7 @@ chrome.runtime.onInstalled.addListener((details) => {
     chrome.storage.local.set({
       wakeWord: "yo",
       personality: "subtle",
-      followupSeconds: 8,
+      followupSeconds: 15,
       voiceReplies: false,
       openMic: false,
       enabled: true,
