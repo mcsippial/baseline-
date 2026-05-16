@@ -115,6 +115,33 @@
   .usage-val { font-weight: 600; color: var(--paper); }
   .usage-reset { color: var(--mute); background: none; border: 0; cursor: pointer; font: 500 11px inherit; padding: 0; }
   .usage-reset:hover { color: var(--paper); }
+
+  .history {
+    margin-top: 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .history[hidden] { display: none; }
+  .history-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--line);
+    font-size: 11px; color: var(--mute);
+    text-transform: uppercase; letter-spacing: 0.07em;
+  }
+  .history-clear { color: var(--mute); background: none; border: 0; cursor: pointer; font: 500 11px inherit; padding: 0; }
+  .history-clear:hover { color: var(--paper); }
+  .history-list { list-style: none; margin: 0; padding: 0; }
+  .history-list li {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+    padding: 6px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    font-size: 12px;
+  }
+  .history-list li:last-child { border-bottom: 0; }
+  .h-text { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .h-time { color: var(--mute); font-size: 10.5px; flex: none; }
 </style>
 </head>
 <body>
@@ -142,6 +169,14 @@
   <div class="usage" id="usage" hidden>
     <div><span class="usage-label">API usage · </span><span class="usage-val" id="usageVal"></span></div>
     <button class="usage-reset" id="resetUsage">Reset</button>
+  </div>
+
+  <div class="history" id="historySection" hidden>
+    <div class="history-head">
+      <span>Recent commands</span>
+      <button class="history-clear" id="clearHistory">Clear</button>
+    </div>
+    <ul class="history-list" id="historyList"></ul>
   </div>
 
   <div class="footer">

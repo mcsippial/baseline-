@@ -76,6 +76,69 @@ async function callAnthropic({ system, user, model }) {
   }
 }
 
+async function handleTabCommand({ action, query }, sender, sendResponse) {
+  if (action === "new") {
+    await chrome.tabs.create({});
+    sendResponse({ ok: true });
+    return;
+  }
+  if (action === "duplicate") {
+    if (sender.tab?.id) await chrome.tabs.duplicate(sender.tab.id);
+    sendResponse({ ok: true });
+    return;
+  }
+  if (action === "close") {
+    if (sender.tab?.id) await chrome.tabs.remove(sender.tab.id);
+    sendResponse({ ok: true });
+    return;
+  }
+  if (action === "pin") {
+    if (sender.tab?.id) await chrome.tabs.update(sender.tab.id, { pinned: true });
+    sendResponse({ ok: true });
+    return;
+  }
+
+  // Actions that need the full tab list
+  const tabs = await chrome.tabs.query({ currentWindow: true });
+
+  if (action === "next") {
+    const cur = tabs.findIndex(t => t.active);
+    const next = tabs[(cur + 1) % tabs.length];
+    await chrome.tabs.update(next.id, { active: true });
+    sendResponse({ ok: true });
+    return;
+  }
+  if (action === "prev") {
+    const cur = tabs.findIndex(t => t.active);
+    const prev = tabs[(cur - 1 + tabs.length) % tabs.length];
+    await chrome.tabs.update(prev.id, { active: true });
+    sendResponse({ ok: true });
+    return;
+  }
+  if (action === "switch" && query) {
+    const q = query.toLowerCase();
+    const scored = tabs
+      .filter(t => !t.active)
+      .map(t => {
+        const title = (t.title || "").toLowerCase();
+        const url   = (t.url   || "").toLowerCase();
+        const score = title.includes(q) ? (title.startsWith(q) ? 3 : 2)
+                    : url.includes(q)   ? 1 : 0;
+        return { t, score };
+      })
+      .filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score);
+    if (scored.length) {
+      await chrome.tabs.update(scored[0].t.id, { active: true });
+      sendResponse({ ok: true, feedback: `Switched to ${scored[0].t.title}` });
+    } else {
+      sendResponse({ ok: false, feedback: `No tab found matching "${query}"` });
+    }
+    return;
+  }
+  sendResponse({ ok: false });
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg?.type === "helm:settings") {
     getSettings().then(sendResponse);
@@ -95,6 +158,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const next = enabled === false ? true : false;
       chrome.storage.local.set({ enabled: next }).then(() => sendResponse({ enabled: next }));
     });
+    return true;
+  }
+  if (msg?.type === "helm:tab") {
+    handleTabCommand(msg, sender, sendResponse);
     return true;
   }
   if (msg?.type === "helm:usage") {

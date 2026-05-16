@@ -204,6 +204,36 @@
     return false;
   }
 
+  /* ---------- Tab command detection ---------- */
+  async function tryTabCommand(text) {
+    let action = null, query = null;
+
+    if (/\b(new\s+tab|open\s+(a\s+)?new\s+tab)\b/i.test(text)) {
+      action = "new";
+    } else if (/\b(close\s+(this\s+|the\s+|current\s+)?tab)\b/i.test(text)) {
+      action = "close";
+    } else if (/\b(duplicate\s+(this\s+|the\s+)?tab)\b/i.test(text)) {
+      action = "duplicate";
+    } else if (/\b(pin\s+(this\s+|the\s+)?tab)\b/i.test(text)) {
+      action = "pin";
+    } else if (/\b(next\s+tab|tab\s+right|go\s+to\s+next\s+tab)\b/i.test(text)) {
+      action = "next";
+    } else if (/\b(prev(ious)?\s+tab|tab\s+left|go\s+to\s+prev(ious)?\s+tab)\b/i.test(text)) {
+      action = "prev";
+    } else {
+      const m = text.match(/\b(?:switch\s+to|go\s+to|open)\s+(?:the\s+)?(?:my\s+)?(.+?)\s+tab\b/i);
+      if (m) { action = "switch"; query = m[1].trim(); }
+    }
+
+    if (!action) return false;
+
+    const result = await new Promise(resolve =>
+      chrome.runtime.sendMessage({ type: "helm:tab", action, query }, resolve)
+    );
+    if (result?.feedback) showSaid(result.feedback);
+    return true;
+  }
+
   /* ---------- Speech handlers ---------- */
   function armCommandCapture(reason) {
     H.captureBuf = "";
@@ -260,8 +290,21 @@
     const clean = text.trim().replace(/[.!?]+$/, "");
     if (!clean) { H.update({ mode: "idle", liveHeard: "" }); return; }
 
+    // Log every non-empty command to history (fire-and-forget)
+    chrome.storage.local.get("helm.history", (r) => {
+      const h = r["helm.history"] || [];
+      chrome.storage.local.set({ "helm.history": [...h, { text: clean, ts: Date.now() }].slice(-10) });
+    });
+
     // Offline commands — instant, no API call
     if (tryOfflineCommand(clean)) {
+      H.update({ mode: "idle", liveHeard: "", committedCommand: "", transcript: "" });
+      armFollowup();
+      return;
+    }
+
+    // Tab commands — routed through background, needs tabs permission
+    if (await tryTabCommand(clean)) {
       H.update({ mode: "idle", liveHeard: "", committedCommand: "", transcript: "" });
       armFollowup();
       return;
