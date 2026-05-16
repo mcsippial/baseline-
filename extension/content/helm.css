@@ -267,6 +267,69 @@
   cursor: pointer;
 }
 
+/* ---------- Risky-action confirmation overlay ---------- */
+[data-helm-confirm] {
+  position: fixed;
+  top: 18px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483647;
+  width: min(480px, 88vw);
+  background: rgba(12,14,18,0.97);
+  border: 1.5px solid rgba(255,138,61, 0.75);
+  border-radius: 16px;
+  overflow: hidden;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 20px 56px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,138,61,0.12);
+  pointer-events: auto;
+  animation: helm-confirm-in 220ms cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+@keyframes helm-confirm-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(0.96); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0)      scale(1); }
+}
+[data-helm-overlay] .helm-confirm-body {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+}
+[data-helm-overlay] .helm-confirm-icon {
+  font-size: 20px; flex: none; line-height: 1;
+  filter: sepia(1) saturate(4) hue-rotate(-10deg);
+}
+[data-helm-overlay] .helm-confirm-text { flex: 1; min-width: 0; }
+[data-helm-overlay] .helm-confirm-action {
+  font: 600 13px/1.3 var(--helm-font);
+  color: #fbf9f5;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+[data-helm-overlay] .helm-confirm-action span { color: var(--helm-accent); }
+[data-helm-overlay] .helm-confirm-hint {
+  font: 400 11.5px/1.4 var(--helm-font);
+  color: rgba(251,249,245,0.5);
+  margin-top: 3px;
+}
+[data-helm-overlay] .helm-confirm-hint b { color: rgba(251,249,245,0.85); font-weight: 600; }
+[data-helm-overlay] .helm-confirm-btns { display: flex; gap: 7px; flex: none; }
+[data-helm-overlay] .helm-confirm-yes,
+[data-helm-overlay] .helm-confirm-no {
+  appearance: none; border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  color: #fbf9f5; font: 600 12px var(--helm-font);
+  padding: 6px 14px; border-radius: 999px; cursor: pointer;
+  transition: background 120ms, border-color 120ms;
+}
+[data-helm-overlay] .helm-confirm-yes:hover { background: rgba(255,138,61,0.25); border-color: rgba(255,138,61,0.6); }
+[data-helm-overlay] .helm-confirm-no:hover  { background: rgba(255,255,255,0.10); }
+[data-helm-overlay] .helm-confirm-track {
+  height: 3px;
+  background: rgba(255,255,255,0.06);
+}
+[data-helm-overlay] .helm-confirm-progress {
+  height: 100%; width: 100%;
+  background: linear-gradient(90deg, var(--helm-accent), #ffb27a);
+  transition: width 40ms linear;
+  transform-origin: left;
+}
+
 /* ---------- Click highlight on target ---------- */
 .helm-target {
   outline: 3px solid #ff8a3d !important;

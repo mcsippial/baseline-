@@ -283,4 +283,18 @@
       return;
     }
   };
+
+  /* ---------- Risky action classifier ---------- */
+  const RISKY_RE = /\b(delete|remove|unsubscribe|buy(\s+now)?|purchase|pay(\s+now)?|check\s*out|place\s+order|complete\s+(purchase|order)|sign\s+out|log\s+out|log\s+me\s+out|deactivate|terminate|revoke|close\s+account|cancel\s+(account|subscription|plan|membership))\b/i;
+
+  H.isRisky = function (el) {
+    const text  = (el.innerText || el.textContent || "").trim().replace(/\s+/g, " ").slice(0, 120);
+    const aria  = el.getAttribute("aria-label") || "";
+    const title = el.getAttribute("title") || "";
+    const attrs = [el.getAttribute("name"), el.getAttribute("id"), el.getAttribute("data-action")]
+      .filter(Boolean).join(" ");
+    const haystack = [text, aria, title, attrs].join(" ");
+    if (!RISKY_RE.test(haystack)) return null;
+    return (aria || title || text || "this").slice(0, 60);
+  };
 })();

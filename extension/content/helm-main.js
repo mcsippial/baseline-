@@ -41,6 +41,21 @@
       <input data-helm-textcmd-input placeholder="or type what you want Helm to do" />
       <button type="submit" data-helm-textcmd-submit hidden>Go</button>
     </form>
+
+    <div class="helm-confirm" data-helm-confirm hidden>
+      <div class="helm-confirm-body">
+        <span class="helm-confirm-icon">⚠</span>
+        <div class="helm-confirm-text">
+          <div class="helm-confirm-action">About to click: <span data-helm-confirm-label></span></div>
+          <div class="helm-confirm-hint">Say <b>yes</b> to confirm · <b>no</b> to cancel</div>
+        </div>
+        <div class="helm-confirm-btns">
+          <button class="helm-confirm-yes" data-helm-confirm-yes>Yes</button>
+          <button class="helm-confirm-no" data-helm-confirm-no>No</button>
+        </div>
+      </div>
+      <div class="helm-confirm-track"><div class="helm-confirm-progress" data-helm-confirm-progress></div></div>
+    </div>
   `;
 
   function mount() {
@@ -64,6 +79,11 @@
   const textcmdEl  = $("[data-helm-textcmd]");
   const textcmdInput = $("[data-helm-textcmd-input]");
   const textcmdSubmit = $("[data-helm-textcmd-submit]");
+  const confirmEl       = $("[data-helm-confirm]");
+  const confirmLabelEl  = $("[data-helm-confirm-label]");
+  const confirmProgress = $("[data-helm-confirm-progress]");
+  const confirmYesBtn   = $("[data-helm-confirm-yes]");
+  const confirmNoBtn    = $("[data-helm-confirm-no]");
 
   /* ---------- Render ---------- */
 
@@ -71,6 +91,8 @@
   let followupRemaining = 0;
   let saidTimer = null;
   let listenTimer = null;
+  let confirmTicker = null;
+  H.pendingConfirm = null;
 
   H.renderCursor = function () {
     cursorEl.style.transform = `translate3d(${H.cursorPos.x}px, ${H.cursorPos.y}px, 0)`;
@@ -181,6 +203,53 @@
   });
   window.addEventListener("keyup", (e) => { if (e.code === "Space") H.state.pttDown = false; });
 
+  /* ---------- Risky-action confirmation ---------- */
+  const CONFIRM_MS = 5000;
+
+  function showConfirmOverlay(label) {
+    confirmLabelEl.textContent = label;
+    confirmEl.hidden = false;
+    const start = Date.now();
+    if (confirmTicker) clearInterval(confirmTicker);
+    confirmTicker = setInterval(() => {
+      const pct = Math.max(0, 1 - (Date.now() - start) / CONFIRM_MS);
+      confirmProgress.style.width = `${pct * 100}%`;
+      if (pct === 0) clearInterval(confirmTicker);
+    }, 40);
+  }
+
+  function hideConfirmOverlay() {
+    confirmEl.hidden = true;
+    if (confirmTicker) { clearInterval(confirmTicker); confirmTicker = null; }
+    confirmProgress.style.width = "100%";
+  }
+
+  function requestConfirm(label) {
+    return new Promise(resolve => {
+      H.pendingConfirm = resolve;
+      showConfirmOverlay(label);
+      setTimeout(() => {
+        if (H.pendingConfirm === resolve) {
+          H.pendingConfirm = null;
+          hideConfirmOverlay();
+          showSaid("Cancelled — timed out.");
+          resolve(false);
+        }
+      }, CONFIRM_MS);
+    });
+  }
+
+  function resolveConfirm(yes) {
+    if (!H.pendingConfirm) return;
+    const resolve = H.pendingConfirm;
+    H.pendingConfirm = null;
+    hideConfirmOverlay();
+    resolve(yes);
+  }
+
+  confirmYesBtn.addEventListener("click", () => resolveConfirm(true));
+  confirmNoBtn.addEventListener("click",  () => resolveConfirm(false));
+
   /* ---------- Offline command table ---------- */
   const OFFLINE = [
     { re: /\bscroll\s+down\b|\bpage\s+down\b/i,                   fn: () => window.scrollBy({ top: 500, behavior: "smooth" }) },
@@ -251,6 +320,18 @@
   }
 
   H.handleFinal = function (text) {
+    // Confirmation intercept — yes/no before any other speech processing
+    if (H.pendingConfirm) {
+      const t = text.toLowerCase().trim();
+      if (/\b(yes|yeah|yep|yup|confirm|do\s+it|go\s+ahead|proceed|ok|okay|sure)\b/.test(t)) {
+        resolveConfirm(true);
+      } else if (/\b(no|nope|nah|cancel|stop|don'?t|abort|never\s+mind|skip)\b/.test(t)) {
+        showSaid("Cancelled.");
+        resolveConfirm(false);
+      }
+      return;
+    }
+
     H.update({ liveHeard: text });
     const s = H.settings || {};
 
@@ -349,8 +430,20 @@
 
     H.update({ mode: "acting" });
     for (const a of plan.actions) {
-      try { await H.executeAction(a, elements); }
-      catch (err) { console.warn("[Helm] action failed:", err); }
+      try {
+        // Gate risky clicks behind a voice/click confirmation
+        if (a.type === "click") {
+          const candidate = elements[a.id]?.el;
+          if (candidate) {
+            const riskLabel = H.isRisky(candidate);
+            if (riskLabel) {
+              const ok = await requestConfirm(riskLabel);
+              if (!ok) continue;
+            }
+          }
+        }
+        await H.executeAction(a, elements);
+      } catch (err) { console.warn("[Helm] action failed:", err); }
     }
     if (plan.speak) {
       showSaid(plan.speak);
