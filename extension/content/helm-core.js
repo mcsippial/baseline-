@@ -244,9 +244,9 @@ Search and typing:
     const summary = viewportSummary ? `\nVisible content:\n${viewportSummary}` : "";
     const selLine = selectedText ? `\nSelected text: "${selectedText.slice(0, 500)}"` : "";
 
-    // Fetch Composio tools if a key is configured
+    // Only fetch Composio tools if the user has actually enabled apps — no latency for everyone else
     let composioBlock = "";
-    if (H.settings?.composioKey) {
+    if (H.settings?.composioKey && H.settings?.composioApps?.length > 0) {
       try {
         const cat = await new Promise(resolve =>
           chrome.runtime.sendMessage({ type: "helm:composio-catalog" }, resolve)
