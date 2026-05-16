@@ -215,17 +215,17 @@
 [data-helm-textcmd] {
   position: fixed; bottom: 22px; left: 50%;
   transform: translateX(-50%);
-  display: flex; align-items: center; gap: 8px;
+  display: flex; flex-direction: column;
   background: rgba(15,17,21,0.88);
   border: 1px solid rgba(255,255,255,0.09);
   border-radius: 999px;
-  padding: 7px 7px 7px 14px;
+  padding: 0;
   z-index: 2147483646;
   backdrop-filter: blur(12px);
   box-shadow: 0 8px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,0,0,0.2);
   width: min(540px, 88vw);
   pointer-events: auto;
-  transition: border-color 220ms, box-shadow 220ms;
+  transition: border-color 220ms, box-shadow 220ms, border-radius 180ms;
 }
 [data-helm-textcmd]:focus-within {
   border-color: rgba(255,138,61,0.5);
@@ -239,12 +239,18 @@
   box-shadow: 0 8px 32px rgba(0,0,0,0.45), 0 0 0 3px rgba(255,138,61,0.12);
 }
 
-/* Reply row — slides in above the input when Helm responds */
+/* Input row — logo + input + mic + send, always a single flex row */
+[data-helm-overlay] .helm-textcmd-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 7px 7px 14px;
+  flex: 1;
+}
+
+/* Reply row — slides in above the input row */
 [data-helm-overlay] .helm-textcmd-reply {
   display: flex; align-items: flex-start; gap: 8px;
-  padding: 9px 4px 10px 4px;
+  padding: 10px 14px 9px 14px;
   border-bottom: 1px solid rgba(255,255,255,0.07);
-  width: 100%;
   animation: helm-reply-in 200ms ease-out;
 }
 @keyframes helm-reply-in {
@@ -265,19 +271,9 @@
 }
 [data-helm-overlay] .helm-textcmd-reply-x:hover { color: #fff; }
 
-/* When reply is visible, give the bar rounded-rectangle corners instead of pill */
+/* When reply is visible, switch from pill to rounded-rect corners */
 [data-helm-textcmd].has-reply {
   border-radius: 18px;
-  flex-wrap: wrap;
-  padding-top: 0; padding-bottom: 7px;
-  align-items: stretch;
-}
-[data-helm-textcmd].has-reply .helm-textcmd-reply { order: -1; }
-[data-helm-textcmd].has-reply .helm-textcmd-logo,
-[data-helm-textcmd].has-reply input,
-[data-helm-textcmd].has-reply .helm-textcmd-mic,
-[data-helm-textcmd].has-reply .helm-textcmd-send {
-  padding-top: 4px;
 }
 
 [data-helm-overlay] .helm-textcmd-logo {

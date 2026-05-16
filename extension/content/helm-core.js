@@ -136,10 +136,17 @@
     try { rec.start(); } catch {}
   };
 
-  H.requestMicAndStart = function () {
-    // Don't gate on getUserMedia — it requires per-origin permission and blocks
-    // Helm on every new domain. SpeechRecognition handles its own mic permission
-    // and fires onerror("not-allowed") if the user denies it.
+  H.requestMicAndStart = async function () {
+    // getUserMedia triggers Chrome's mic-permission prompt on each new origin.
+    // Without it, SpeechRecognition silently fails on pages that haven't granted
+    // mic access yet. We stop the stream immediately — we only need the prompt.
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop());
+    } catch {
+      // denied or unavailable — SpeechRecognition will fire "not-allowed" and
+      // we'll surface the error through the normal onerror path
+    }
     H.wantListening = true;
     H.update({ mode: "idle", lastError: "" });
     H.startRecognizer();

@@ -38,20 +38,22 @@
         <span class="helm-textcmd-reply-text" data-helm-textcmd-reply-text></span>
         <button class="helm-textcmd-reply-x" type="button" data-helm-textcmd-reply-x>&times;</button>
       </div>
-      <svg class="helm-textcmd-logo" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="10" cy="10" r="9" fill="rgba(255,138,61,0.18)" stroke="rgba(255,138,61,0.6)" stroke-width="1.2"/>
-        <circle cx="10" cy="10" r="4" fill="#ff8a3d"/>
-      </svg>
-      <input data-helm-textcmd-input placeholder="Ask Helm anything…" />
-      <button class="helm-textcmd-mic" type="button" data-helm-textcmd-mic aria-label="Voice input">
-        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-          <rect x="9" y="2" width="6" height="12" rx="3"/>
-          <path d="M5 10a7 7 0 0 0 14 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
-          <line x1="12" y1="19" x2="12" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <line x1="8" y1="22" x2="16" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <div class="helm-textcmd-row">
+        <svg class="helm-textcmd-logo" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="10" cy="10" r="9" fill="rgba(255,138,61,0.18)" stroke="rgba(255,138,61,0.6)" stroke-width="1.2"/>
+          <circle cx="10" cy="10" r="4" fill="#ff8a3d"/>
         </svg>
-      </button>
-      <button class="helm-textcmd-send" type="submit" data-helm-textcmd-submit hidden>Go</button>
+        <input data-helm-textcmd-input placeholder="Ask Helm anything…" />
+        <button class="helm-textcmd-mic" type="button" data-helm-textcmd-mic aria-label="Voice input">
+          <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <rect x="9" y="2" width="6" height="12" rx="3"/>
+            <path d="M5 10a7 7 0 0 0 14 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+            <line x1="12" y1="19" x2="12" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="8" y1="22" x2="16" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <button class="helm-textcmd-send" type="submit" data-helm-textcmd-submit hidden>Go</button>
+      </div>
     </form>
 
     <div class="helm-confirm" data-helm-confirm hidden>
