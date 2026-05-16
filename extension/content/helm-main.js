@@ -339,7 +339,13 @@
   H.loadSettings().then(() => {
     if (H.settings?.enabled === false) {
       root.style.display = "none";
+      render();
+      return;
     }
     render();
+    // Auto-start on every new page when Helm is enabled.
+    // getUserMedia will succeed silently if mic permission was already granted
+    // for this origin; if not, it fails gracefully and shows the Enable button.
+    H.requestMicAndStart();
   });
 })();
