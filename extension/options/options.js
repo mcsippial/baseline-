@@ -23,10 +23,11 @@ async function load() {
   const enabledApps = Array.isArray(s.composioApps) ? s.composioApps : [];
   if (s.composioKey) {
     $("#refreshConnections").hidden = false;
+    $("#appGrid").hidden = false;
     const { connections } = await new Promise(r => chrome.runtime.sendMessage({ type: "helm:composio-connections" }, r));
     renderAppGrid(enabledApps, connections || []);
   } else {
-    renderAppGrid(enabledApps, []);
+    $("#appGrid").hidden = true; // hide until user adds a key
   }
 }
 
@@ -150,6 +151,7 @@ $("#saveComposioKey").addEventListener("click", async () => {
   flashSaved($("#saveComposioKey"));
   if (key) {
     $("#refreshConnections").hidden = false;
+    $("#appGrid").hidden = false;
     $("#refreshConnections").textContent = "Checking…";
     const s = await chrome.storage.local.get("composioApps");
     const { connections } = await new Promise(r => chrome.runtime.sendMessage({ type: "helm:composio-connections" }, r));
