@@ -39,9 +39,20 @@
     </div>
 
     <form class="helm-textcmd" data-helm-textcmd hidden>
-      <span class="helm-textcmd-dot"></span>
-      <input data-helm-textcmd-input placeholder="or type what you want Helm to do" />
-      <button type="submit" data-helm-textcmd-submit hidden>Go</button>
+      <svg class="helm-textcmd-logo" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="10" cy="10" r="9" fill="rgba(255,138,61,0.18)" stroke="rgba(255,138,61,0.6)" stroke-width="1.2"/>
+        <circle cx="10" cy="10" r="4" fill="#ff8a3d"/>
+      </svg>
+      <input data-helm-textcmd-input placeholder="Ask Helm anything…" />
+      <button class="helm-textcmd-mic" type="button" data-helm-textcmd-mic aria-label="Voice input">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <rect x="9" y="2" width="6" height="12" rx="3"/>
+          <path d="M5 10a7 7 0 0 0 14 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <line x1="12" y1="19" x2="12" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="8" y1="22" x2="16" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button class="helm-textcmd-send" type="submit" data-helm-textcmd-submit hidden>Go</button>
     </form>
 
     <div class="helm-confirm" data-helm-confirm hidden>
@@ -78,9 +89,10 @@
   const saidEl     = $("[data-helm-said]");
   const saidTextEl = $("[data-helm-said-text]");
   const saidX      = $("[data-helm-said-x]");
-  const textcmdEl  = $("[data-helm-textcmd]");
-  const textcmdInput = $("[data-helm-textcmd-input]");
+  const textcmdEl     = $("[data-helm-textcmd]");
+  const textcmdInput  = $("[data-helm-textcmd-input]");
   const textcmdSubmit = $("[data-helm-textcmd-submit]");
+  const textcmdMic    = $("[data-helm-textcmd-mic]");
   const confirmEl       = $("[data-helm-confirm]");
   const confirmLabelEl  = $("[data-helm-confirm-label]");
   const confirmProgress = $("[data-helm-confirm-progress]");
@@ -178,10 +190,17 @@
       saidEl.hidden = true;
     }
 
-    // Text command submit visibility
-    textcmdSubmit.hidden = !textcmdInput.value.trim();
-    textcmdInput.disabled = mode === "thinking" || mode === "acting";
-    textcmdInput.placeholder = textcmdInput.disabled ? "Helm is working…" : "or type what you want Helm to do";
+    // Text command bar state
+    const barBusy = mode === "thinking" || mode === "acting" || mode === "speaking";
+    if (!textcmdMic.classList.contains("is-recording")) {
+      textcmdSubmit.hidden = !textcmdInput.value.trim();
+      textcmdInput.disabled = barBusy;
+      textcmdInput.placeholder = barBusy
+        ? (mode === "thinking" ? "Thinking…" : mode === "acting" ? "Acting…" : "Speaking…")
+        : "Ask Helm anything…";
+    }
+    textcmdEl.classList.toggle("is-session", H.sessionActive);
+    textcmdEl.classList.toggle("is-busy", barBusy);
   }
   function escape(s) { return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;" }[c])); }
 
@@ -519,12 +538,70 @@
   }
   H.showSaid = showSaid;
 
+  /* ---------- Text-bar voice input ---------- */
+  let textbarRec = null;
+
+  function startTextbarVoice() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
+    const rec = new SR();
+    rec.continuous = false;
+    rec.interimResults = true;
+    rec.lang = H.settings?.micLang || "en-US";
+    textbarRec = rec;
+    textcmdMic.classList.add("is-recording");
+    textcmdInput.value = "";
+    textcmdInput.placeholder = "Listening…";
+    textcmdInput.disabled = false;
+    textcmdSubmit.hidden = true;
+    textcmdInput.focus();
+    let committed = false;
+    rec.onresult = (e) => {
+      let interim = "", final = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) final += r[0].transcript;
+        else interim += r[0].transcript;
+      }
+      textcmdInput.value = final || interim;
+      textcmdSubmit.hidden = !textcmdInput.value.trim();
+    };
+    rec.onend = () => {
+      textbarRec = null;
+      textcmdMic.classList.remove("is-recording");
+      textcmdInput.placeholder = "Ask Helm anything…";
+      const v = textcmdInput.value.trim();
+      if (v && !committed) {
+        committed = true;
+        // Brief pause so the user sees what was heard before it executes
+        setTimeout(() => {
+          textcmdInput.value = "";
+          textcmdSubmit.hidden = true;
+          commitCommand(v);
+        }, 420);
+      }
+    };
+    rec.onerror = () => {
+      textbarRec = null;
+      textcmdMic.classList.remove("is-recording");
+      textcmdInput.placeholder = "Ask Helm anything…";
+    };
+    try { rec.start(); } catch {}
+  }
+
   /* ---------- UI events ---------- */
   enableBtn.addEventListener("click", () => { H.sessionActive = true; H.requestMicAndStart(); });
   orbBtn.addEventListener("click", () => H.stopAll());
   saidX.addEventListener("click", () => H.update({ saidText: "" }));
+
+  textcmdMic.addEventListener("click", () => {
+    if (textbarRec) { try { textbarRec.stop(); } catch {} return; }
+    startTextbarVoice();
+  });
+
   textcmdEl.addEventListener("submit", (e) => {
     e.preventDefault();
+    if (textbarRec) { try { textbarRec.stop(); } catch {} return; }
     const v = textcmdInput.value.trim();
     if (!v) return;
     textcmdInput.value = "";
@@ -533,6 +610,19 @@
   });
   textcmdInput.addEventListener("input", () => {
     textcmdSubmit.hidden = !textcmdInput.value.trim();
+  });
+
+  // Press "/" anywhere (when not in an input) to focus the command bar
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "/" && !e.repeat
+        && document.activeElement?.tagName !== "INPUT"
+        && document.activeElement?.tagName !== "TEXTAREA"
+        && !document.activeElement?.isContentEditable
+        && textcmdEl.style.display !== "none"
+        && !textcmdEl.hidden) {
+      e.preventDefault();
+      textcmdInput.focus();
+    }
   });
 
   /* ---------- Settings live updates ---------- */
