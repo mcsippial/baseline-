@@ -10,7 +10,7 @@ async function getSettings() {
   const out = await chrome.storage.local.get([
     "apiKey", "model", "wakeWord", "customWake",
     "openMic", "voiceReplies", "personality", "followupSeconds",
-    "enabled", "micLang",
+    "enabled", "micLang", "useVision",
   ]);
   return {
     apiKey: out.apiKey || "",
@@ -23,6 +23,7 @@ async function getSettings() {
     followupSeconds: typeof out.followupSeconds === "number" ? out.followupSeconds : 8,
     enabled: out.enabled !== false,
     micLang: out.micLang || "en-US",
+    useVision: !!out.useVision,
   };
 }
 
@@ -39,11 +40,13 @@ async function trackUsage(usage) {
   });
 }
 
-async function callAnthropic({ system, user, model }) {
+async function callAnthropic({ system, user, userContent, model }) {
   const { apiKey } = await getSettings();
   if (!apiKey) {
     return { ok: false, error: "no_api_key", message: "Add your Anthropic API key in Helm options." };
   }
+  // userContent is an array of content blocks (for vision); user is a plain string fallback
+  const messageContent = userContent || user;
   try {
     const res = await fetch(API_URL, {
       method: "POST",
@@ -57,7 +60,7 @@ async function callAnthropic({ system, user, model }) {
         model: model || DEFAULT_MODEL,
         max_tokens: 1024,
         system,
-        messages: [{ role: "user", content: user }],
+        messages: [{ role: "user", content: messageContent }],
       }),
     });
     if (!res.ok) {
@@ -145,9 +148,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
   if (msg?.type === "helm:claude") {
-    callAnthropic({ system: msg.system, user: msg.user, model: msg.model })
+    callAnthropic({ system: msg.system, user: msg.user, userContent: msg.userContent, model: msg.model })
       .then(sendResponse);
     return true; // keep channel open for async response
+  }
+  if (msg?.type === "helm:screenshot") {
+    const tabId = sender.tab?.id;
+    if (!tabId) { sendResponse({ ok: false, error: "no_tab" }); return true; }
+    chrome.tabs.captureVisibleTab(sender.tab.windowId, { format: "jpeg", quality: 70 })
+      .then(dataUrl => sendResponse({ ok: true, dataUrl }))
+      .catch(err => sendResponse({ ok: false, error: String(err) }));
+    return true;
   }
   if (msg?.type === "helm:set") {
     chrome.storage.local.set(msg.values || {}).then(() => sendResponse({ ok: true }));
@@ -188,6 +199,7 @@ chrome.runtime.onInstalled.addListener((details) => {
       openMic: false,
       enabled: true,
       micLang: "en-US",
+      useVision: false,
       "helm.usage": { input: 0, output: 0, calls: 0 },
     });
     chrome.runtime.openOptionsPage();

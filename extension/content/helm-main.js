@@ -1,7 +1,9 @@
 /* Helm content script — main
  * Builds the overlay DOM, wires events, runs the command loop.
+ * Only runs in the top-level frame — iframes get helm-core/dom but no overlay.
  */
 (function () {
+  if (window !== window.top) return; // don't mount overlay inside iframes
   const H = window.__helm;
   if (!H) return;
 

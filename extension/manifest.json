@@ -45,7 +45,7 @@
       "js": ["content/helm-core.js", "content/helm-dom.js", "content/helm-main.js"],
       "css": ["content/helm.css"],
       "run_at": "document_idle",
-      "all_frames": false
+      "all_frames": true
     }
   ],
 

@@ -233,11 +233,31 @@ Search and typing:
     const screenLine = screen ? `\nPage: ${screen}` : "";
     const summary = viewportSummary ? `\nVisible content:\n${viewportSummary}` : "";
 
-    const user = `Command: "${command}"${screenLine}${summary}\n\nAvailable elements (id : label):\n${elementsList}${recentList}\n\nReturn JSON only.`;
+    const userText = `Command: "${command}"${screenLine}${summary}\n\nAvailable elements (id : label):\n${elementsList}${recentList}\n\nReturn JSON only.`;
+
+    // Build message content — add screenshot when vision is enabled
+    let userContent = userText;
+    if (H.settings?.useVision) {
+      try {
+        const shot = await new Promise(resolve =>
+          chrome.runtime.sendMessage({ type: "helm:screenshot" }, resolve)
+        );
+        if (shot?.ok && shot.dataUrl) {
+          const base64 = shot.dataUrl.replace(/^data:image\/\w+;base64,/, "");
+          userContent = [
+            {
+              type: "image",
+              source: { type: "base64", media_type: "image/jpeg", data: base64 },
+            },
+            { type: "text", text: userText },
+          ];
+        }
+      } catch { /* vision failed — fall back to text-only */ }
+    }
 
     const resp = await new Promise(resolve => {
       chrome.runtime.sendMessage(
-        { type: "helm:claude", system, user, model: H.settings?.model },
+        { type: "helm:claude", system, userContent: Array.isArray(userContent) ? userContent : undefined, user: Array.isArray(userContent) ? undefined : userContent, model: H.settings?.model },
         resolve
       );
     });

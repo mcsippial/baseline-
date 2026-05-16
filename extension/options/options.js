@@ -1,7 +1,7 @@
 /* Helm options page */
 const $ = (s) => document.querySelector(s);
 
-const KEYS = ["apiKey","model","wakeWord","customWake","openMic","voiceReplies","personality","followupSeconds","micLang"];
+const KEYS = ["apiKey","model","wakeWord","customWake","openMic","voiceReplies","personality","followupSeconds","micLang","useVision"];
 
 async function load() {
   const s = await chrome.storage.local.get(KEYS);
@@ -14,6 +14,7 @@ async function load() {
   $("#followupSecondsVal").textContent = `${$("#followupSeconds").value}s`;
   setToggle("#openMic", !!s.openMic);
   setToggle("#voiceReplies", !!s.voiceReplies);
+  setToggle("#useVision", !!s.useVision);
   $("#micLang").value = s.micLang || "en-US";
   $("#customWakeField").hidden = $("#wakeWord").value !== "custom";
 }
@@ -64,6 +65,11 @@ $("#voiceReplies").addEventListener("click", () => {
   const next = !toggleOn("#voiceReplies");
   setToggle("#voiceReplies", next);
   save({ voiceReplies: next });
+});
+$("#useVision").addEventListener("click", () => {
+  const next = !toggleOn("#useVision");
+  setToggle("#useVision", next);
+  save({ useVision: next });
 });
 
 function flashSaved(btn) {

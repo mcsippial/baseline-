@@ -75,26 +75,44 @@
   H.collectElements = function (root = document) {
     const seen = new Set();
     const items = [];
-    const nodes = root.querySelectorAll(INTERACTIVE_SELECTOR);
-    for (const el of nodes) {
-      if (seen.has(el)) continue;
-      if (el.closest("[data-helm-overlay]")) continue;
-      if (!isVisible(el)) continue;
-      seen.add(el);
-      const label = deriveLabel(el).slice(0, 120);
-      const text = (el.innerText || el.textContent || "").trim().replace(/\s+/g, " ").slice(0, 140);
-      const tag = el.tagName.toLowerCase();
-      const role = el.getAttribute("role") || "";
-      const kind = tag === "a" ? "link" : (role || tag || "el");
-      items.push({
-        id: items.length,
-        label,
-        section: sectionContext(el),
-        kind,
-        text: text && text !== label ? text : "",
-        el,
-      });
+
+    function collectFrom(doc, frameOffsetX, frameOffsetY) {
+      const nodes = doc.querySelectorAll(INTERACTIVE_SELECTOR);
+      for (const el of nodes) {
+        if (seen.has(el)) continue;
+        if (el.closest("[data-helm-overlay]")) continue;
+        if (!isVisible(el)) continue;
+        seen.add(el);
+        const label = deriveLabel(el).slice(0, 120);
+        const text = (el.innerText || el.textContent || "").trim().replace(/\s+/g, " ").slice(0, 140);
+        const tag = el.tagName.toLowerCase();
+        const role = el.getAttribute("role") || "";
+        const kind = tag === "a" ? "link" : (role || tag || "el");
+        items.push({
+          id: items.length,
+          label,
+          section: sectionContext(el),
+          kind,
+          text: text && text !== label ? text : "",
+          el,
+          _frameOffsetX: frameOffsetX,
+          _frameOffsetY: frameOffsetY,
+        });
+      }
+
+      // Collect from same-origin iframes
+      const frames = doc.querySelectorAll("iframe");
+      for (const frame of frames) {
+        try {
+          const fdoc = frame.contentDocument;
+          if (!fdoc) continue;
+          const fr = frame.getBoundingClientRect();
+          collectFrom(fdoc, frameOffsetX + fr.left, frameOffsetY + fr.top);
+        } catch { /* cross-origin — skip */ }
+      }
     }
+
+    collectFrom(root, 0, 0);
     return items;
   };
 
@@ -141,11 +159,11 @@
     });
   };
 
-  H.glideTo = async function (el) {
+  H.glideTo = async function (el, frameOffsetX = 0, frameOffsetY = 0) {
     H.aiDriving = true;
     const r = el.getBoundingClientRect();
-    const tx = r.left + r.width / 2;
-    const ty = r.top + r.height / 2;
+    const tx = r.left + r.width / 2 + frameOffsetX;
+    const ty = r.top + r.height / 2 + frameOffsetY;
     await new Promise(res => setTimeout(res, 100));
     await H.animateTo(H.cursorPos.x, H.cursorPos.y, tx, ty, 480, (x, y) => {
       H.cursorPos.x = x; H.cursorPos.y = y;
@@ -154,8 +172,8 @@
     H.aiDriving = false;
   };
 
-  H.glideToAndClick = async function (el) {
-    await H.glideTo(el);
+  H.glideToAndClick = async function (el, frameOffsetX = 0, frameOffsetY = 0) {
+    await H.glideTo(el, frameOffsetX, frameOffsetY);
     el.classList.add("helm-target");
     await new Promise(r => setTimeout(r, 160));
     el.click();
@@ -166,11 +184,16 @@
   /* ---------- Action executor ---------- */
   H.executeAction = async function (action, elements) {
     const fresh = H.collectElements();
-    const findEl = (id) => {
+    const findItem = (id) => {
       const initial = elements[id];
-      if (initial && document.body.contains(initial.el)) return initial.el;
-      if (initial) { const m = fresh.find(e => e.label === initial.label); if (m) return m.el; }
-      return fresh[id]?.el || null;
+      if (initial && document.body.contains(initial.el)) return initial;
+      if (initial) { const m = fresh.find(e => e.label === initial.label); if (m) return m; }
+      return fresh[id] || null;
+    };
+    const findEl = (id) => findItem(id)?.el || null;
+    const frameOffsets = (id) => {
+      const item = findItem(id);
+      return [item?._frameOffsetX || 0, item?._frameOffsetY || 0];
     };
 
     if (action.type === "wait") {
@@ -184,20 +207,23 @@
     }
     if (action.type === "click") {
       const t = findEl(action.id); if (!t) return;
-      await H.glideToAndClick(t);
+      const [ox, oy] = frameOffsets(action.id);
+      await H.glideToAndClick(t, ox, oy);
       H.logAction(`click "${t.getAttribute("data-helm-label") || (t.innerText||"").slice(0,40)}"`);
       return;
     }
     if (action.type === "hover") {
       const t = findEl(action.id); if (!t) return;
-      await H.glideTo(t);
+      const [ox, oy] = frameOffsets(action.id);
+      await H.glideTo(t, ox, oy);
       t.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
       t.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
       return;
     }
     if (action.type === "focus") {
       const t = findEl(action.id); if (!t) return;
-      await H.glideTo(t);
+      const [ox, oy] = frameOffsets(action.id);
+      await H.glideTo(t, ox, oy);
       t.focus?.();
       t.classList.add("helm-target");
       setTimeout(() => t.classList.remove("helm-target"), 600);
@@ -205,7 +231,8 @@
     }
     if (action.type === "read") {
       const t = findEl(action.id); if (!t) return;
-      await H.glideTo(t);
+      const [ox, oy] = frameOffsets(action.id);
+      await H.glideTo(t, ox, oy);
       t.classList.add("helm-target");
       let txt = (t.innerText || t.textContent || "").trim().replace(/\s+/g, " ");
       txt = txt.replace(/[★☆⌫×‹›↻⊞◐◷▤⋯◀▶•◦►◇◆●○]/g, " ").replace(/\s+/g, " ").trim().slice(0, 400);
