@@ -204,7 +204,8 @@ Schema:
     { "type": "key",    "key": "Enter|Tab|Escape|ArrowDown|ArrowUp|...", "id": <optional> },
     { "type": "scroll", "direction": "up|down|top|bottom", "id": <optional>, "amount": <optional> },
     { "type": "read",   "id": <element id> },
-    { "type": "wait",   "ms": <number> }
+    { "type": "wait",   "ms": <number> },
+    { "type": "composio", "action": "<ACTION_ID>", "params": { <key>: <value> } }
   ],
   "clarify": "if ambiguous, ASK a follow-up question instead of acting. Else empty."
 }
@@ -243,7 +244,35 @@ Search and typing:
     const summary = viewportSummary ? `\nVisible content:\n${viewportSummary}` : "";
     const selLine = selectedText ? `\nSelected text: "${selectedText.slice(0, 500)}"` : "";
 
-    const userText = `Command: "${command}"${screenLine}${selLine}${summary}\n\nAvailable elements (id : label):\n${elementsList}${recentList}\n\nReturn JSON only.`;
+    // Fetch Composio tools if a key is configured
+    let composioBlock = "";
+    if (H.settings?.composioKey) {
+      try {
+        const cat = await new Promise(resolve =>
+          chrome.runtime.sendMessage({ type: "helm:composio-catalog" }, resolve)
+        );
+        if (cat?.hasKey) {
+          const connected = (cat.enabledApps || [])
+            .map(id => cat.catalog?.find(a => a.id === id))
+            .filter(app => app && cat.connections?.includes(app.id));
+          const suggested = (cat.enabledApps || [])
+            .map(id => cat.catalog?.find(a => a.id === id))
+            .filter(app => app && !cat.connections?.includes(app.id));
+          if (connected.length) {
+            const lines = connected.flatMap(app => app.actions.map(a => {
+              const ps = Object.entries(a.params).map(([k, v]) => `${k}: ${v}`).join(", ");
+              return `  ${a.id}: ${a.desc}${ps ? ` (${ps})` : ""}`;
+            })).join("\n");
+            composioBlock += `\n\nComposio actions available — use { "type": "composio", "action": "ID", "params": {...} }:\n${lines}`;
+          }
+          if (suggested.length) {
+            composioBlock += `\n\nNot yet connected (mention in 'speak' if relevant): ${suggested.map(a => a.name).join(", ")}. Example: "You can do that — connect ${suggested[0]?.name} in Helm Settings."`;
+          }
+        }
+      } catch { /* composio unavailable — silent fallback */ }
+    }
+
+    const userText = `Command: "${command}"${screenLine}${selLine}${summary}\n\nAvailable elements (id : label):\n${elementsList}${recentList}${composioBlock}\n\nReturn JSON only.`;
 
     // Build message content — add screenshot when vision is enabled
     let userContent = userText;

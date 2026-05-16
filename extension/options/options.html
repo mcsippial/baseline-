@@ -123,6 +123,30 @@
   }
 
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  /* App cards */
+  .app-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 8px;
+    transition: border-color 150ms;
+  }
+  .app-card.is-enabled { border-color: rgba(255,138,61,0.3); }
+  .app-card-head { display: flex; align-items: center; gap: 8px; }
+  .app-card-icon { font-size: 18px; line-height: 1; }
+  .app-card-name { font: 600 13px var(--font); flex: 1; }
+  .app-status {
+    font: 500 10px var(--font); padding: 2px 7px;
+    border-radius: 999px; letter-spacing: 0.05em;
+  }
+  .app-status.connected { background: rgba(74,222,128,0.12); color: #4ade80; border: 1px solid rgba(74,222,128,0.25); }
+  .app-status.disconnected { background: rgba(255,255,255,0.05); color: var(--mute); border: 1px solid var(--line); }
+  .app-card-foot { display: flex; align-items: center; justify-content: space-between; }
+  .app-enable-row { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--mute); }
+  .app-connect { font: 500 11px var(--font); color: var(--accent); text-decoration: none; }
+  .app-connect:hover { color: var(--accent-soft); }
 </style>
 </head>
 <body>
@@ -233,6 +257,26 @@
       </div>
       <button class="toggle" id="useVision" aria-label="Vision"></button>
     </div>
+  </div>
+
+  <div class="section" id="integrationsSection">
+    <h2>Integrations <span class="badge">Composio</span></h2>
+    <p class="hint">Connect apps so Helm can act outside the browser — send emails, create issues, add events, and more.</p>
+
+    <div class="field">
+      <label>Composio API key</label>
+      <div class="keyrow">
+        <input class="input" type="password" id="composioKey" placeholder="Your Composio API key" autocomplete="off" />
+        <button class="btn primary" id="saveComposioKey">Save</button>
+      </div>
+      <div class="desc">Get one free at <a href="https://app.composio.dev" target="_blank" style="color:var(--accent)">app.composio.dev</a> · Used only to call Composio's API.</div>
+    </div>
+
+    <div id="appGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:4px;"></div>
+
+    <button class="btn" id="refreshConnections" style="margin-top:12px; width:auto; padding:7px 16px; font-size:12px;" hidden>
+      Refresh connections
+    </button>
   </div>
 
   <div class="section">

@@ -309,6 +309,19 @@
       }
       return;
     }
+    if (action.type === "composio" && action.action) {
+      H.showSaid?.(`Running ${action.action.split("_")[0].toLowerCase()}…`);
+      const result = await new Promise(resolve =>
+        chrome.runtime.sendMessage({ type: "helm:composio", action: action.action, params: action.params || {} }, resolve)
+      );
+      if (result?.ok) {
+        H.showSaid?.(result.formatted || "Done.");
+        if (H.settings?.voiceReplies) await H.speak(result.formatted || "Done.");
+      } else {
+        H.showSaid?.(`That didn't work: ${result?.message || "unknown error"}`);
+      }
+      return;
+    }
   };
 
   /* ---------- Risky action classifier ---------- */
