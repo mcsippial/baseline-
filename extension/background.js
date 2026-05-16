@@ -10,7 +10,7 @@ async function getSettings() {
   const out = await chrome.storage.local.get([
     "apiKey", "model", "wakeWord", "customWake",
     "openMic", "voiceReplies", "personality", "followupSeconds",
-    "enabled",
+    "enabled", "micLang",
   ]);
   return {
     apiKey: out.apiKey || "",
@@ -21,8 +21,22 @@ async function getSettings() {
     voiceReplies: !!out.voiceReplies,
     personality: out.personality || "subtle",
     followupSeconds: typeof out.followupSeconds === "number" ? out.followupSeconds : 8,
-    enabled: out.enabled !== false, // default on
+    enabled: out.enabled !== false,
+    micLang: out.micLang || "en-US",
   };
+}
+
+async function trackUsage(usage) {
+  if (!usage) return;
+  const stored = await chrome.storage.local.get("helm.usage");
+  const prev = stored["helm.usage"] || { input: 0, output: 0, calls: 0 };
+  await chrome.storage.local.set({
+    "helm.usage": {
+      input:  prev.input  + (usage.input_tokens  || 0),
+      output: prev.output + (usage.output_tokens || 0),
+      calls:  prev.calls  + 1,
+    },
+  });
 }
 
 async function callAnthropic({ system, user, model }) {
@@ -51,6 +65,7 @@ async function callAnthropic({ system, user, model }) {
       return { ok: false, error: "api_error", status: res.status, message: text.slice(0, 500) };
     }
     const json = await res.json();
+    trackUsage(json.usage); // fire-and-forget; non-blocking
     const text = (json.content || [])
       .filter(c => c.type === "text")
       .map(c => c.text)
@@ -82,6 +97,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     });
     return true;
   }
+  if (msg?.type === "helm:usage") {
+    chrome.storage.local.get("helm.usage").then(r =>
+      sendResponse(r["helm.usage"] || { input: 0, output: 0, calls: 0 })
+    );
+    return true;
+  }
+  if (msg?.type === "helm:usage-reset") {
+    chrome.storage.local.set({ "helm.usage": { input: 0, output: 0, calls: 0 } })
+      .then(() => sendResponse({ ok: true }));
+    return true;
+  }
 });
 
 // First-install: open options so user can paste their API key.
@@ -94,6 +120,8 @@ chrome.runtime.onInstalled.addListener((details) => {
       voiceReplies: false,
       openMic: false,
       enabled: true,
+      micLang: "en-US",
+      "helm.usage": { input: 0, output: 0, calls: 0 },
     });
     chrome.runtime.openOptionsPage();
   }

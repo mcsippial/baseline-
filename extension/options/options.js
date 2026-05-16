@@ -1,7 +1,7 @@
 /* Helm options page */
 const $ = (s) => document.querySelector(s);
 
-const KEYS = ["apiKey","model","wakeWord","customWake","openMic","voiceReplies","personality","followupSeconds"];
+const KEYS = ["apiKey","model","wakeWord","customWake","openMic","voiceReplies","personality","followupSeconds","micLang"];
 
 async function load() {
   const s = await chrome.storage.local.get(KEYS);
@@ -14,6 +14,7 @@ async function load() {
   $("#followupSecondsVal").textContent = `${$("#followupSeconds").value}s`;
   setToggle("#openMic", !!s.openMic);
   setToggle("#voiceReplies", !!s.voiceReplies);
+  $("#micLang").value = s.micLang || "en-US";
   $("#customWakeField").hidden = $("#wakeWord").value !== "custom";
 }
 
@@ -46,6 +47,7 @@ $("#wakeWord").addEventListener("change", () => {
 $("#customWake").addEventListener("input", () => save({ customWake: $("#customWake").value }));
 
 $("#personality").addEventListener("change", () => save({ personality: $("#personality").value }));
+$("#micLang").addEventListener("change", () => save({ micLang: $("#micLang").value }));
 
 $("#followupSeconds").addEventListener("input", () => {
   const v = parseInt($("#followupSeconds").value, 10);

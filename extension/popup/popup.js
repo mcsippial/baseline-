@@ -34,9 +34,23 @@ async function render() {
   $("#wakeKbd").textContent = `"${wakeLabel(s)}"`;
 }
 
+async function renderUsage() {
+  const u = await chrome.runtime.sendMessage({ type: "helm:usage" });
+  const el = $("#usage");
+  if (!u || u.calls === 0) { el.hidden = true; return; }
+  el.hidden = false;
+  const total = (u.input + u.output).toLocaleString();
+  $("#usageVal").textContent = `${u.calls} call${u.calls !== 1 ? "s" : ""} · ${total} tokens`;
+}
+
 $("#toggle").addEventListener("click", async () => {
   await chrome.runtime.sendMessage({ type: "helm:toggle" });
   render();
+});
+
+$("#resetUsage").addEventListener("click", async () => {
+  await chrome.runtime.sendMessage({ type: "helm:usage-reset" });
+  renderUsage();
 });
 
 $("#openSettings").addEventListener("click", () => {
@@ -48,3 +62,4 @@ $("#aboutLink").addEventListener("click", () => {
 });
 
 render();
+renderUsage();

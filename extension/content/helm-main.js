@@ -181,6 +181,29 @@
   });
   window.addEventListener("keyup", (e) => { if (e.code === "Space") H.state.pttDown = false; });
 
+  /* ---------- Offline command table ---------- */
+  const OFFLINE = [
+    { re: /\bscroll\s+down\b|\bpage\s+down\b/i,                   fn: () => window.scrollBy({ top: 500, behavior: "smooth" }) },
+    { re: /\bscroll\s+up\b|\bpage\s+up\b/i,                       fn: () => window.scrollBy({ top: -500, behavior: "smooth" }) },
+    { re: /\b(go\s+to|scroll\s+to)\s+(the\s+)?top\b/i,            fn: () => window.scrollTo({ top: 0, behavior: "smooth" }) },
+    { re: /\b(go\s+to|scroll\s+to)\s+(the\s+)?bottom\b/i,         fn: () => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }) },
+    { re: /\bgo\s+back\b/i,                                       fn: () => history.back() },
+    { re: /\bgo\s+forward\b/i,                                    fn: () => history.forward() },
+    { re: /\b(refresh|reload)(\s+(the\s+)?(page|tab))?\b/i,       fn: () => location.reload() },
+    { re: /\bcopy\s+(that|this|it)\b|\bjust\s+copy\b/i,           fn: () => document.execCommand("copy") },
+    { re: /\bzoom\s+in\b/i,                                       fn: () => { const z = parseFloat(document.body.style.zoom || "1"); document.body.style.zoom = Math.min(z + 0.15, 3).toFixed(2); } },
+    { re: /\bzoom\s+out\b/i,                                      fn: () => { const z = parseFloat(document.body.style.zoom || "1"); document.body.style.zoom = Math.max(z - 0.15, 0.3).toFixed(2); } },
+    { re: /\b(reset\s+zoom|zoom\s+reset|zoom\s+normal)\b/i,       fn: () => { document.body.style.zoom = ""; } },
+  ];
+  const SUMMARIZE_RE = /\b(summarize|give\s+me\s+a\s+summary|what'?s?\s+on\s+this\s+page|explain\s+this\s+page|what\s+(does\s+this|is\s+this)\s+(page\s+)?(say|about|do)|describe\s+this\s+page|what\s+is\s+this\s+(page\s+)?about)\b/i;
+
+  function tryOfflineCommand(text) {
+    for (const { re, fn } of OFFLINE) {
+      if (re.test(text)) { try { fn(); } catch {} return true; }
+    }
+    return false;
+  }
+
   /* ---------- Speech handlers ---------- */
   function armCommandCapture(reason) {
     H.captureBuf = "";
@@ -236,6 +259,28 @@
     if (listenTimer) { clearTimeout(listenTimer); listenTimer = null; }
     const clean = text.trim().replace(/[.!?]+$/, "");
     if (!clean) { H.update({ mode: "idle", liveHeard: "" }); return; }
+
+    // Offline commands — instant, no API call
+    if (tryOfflineCommand(clean)) {
+      H.update({ mode: "idle", liveHeard: "", committedCommand: "", transcript: "" });
+      armFollowup();
+      return;
+    }
+
+    // Page summarization — specialized Claude call
+    if (SUMMARIZE_RE.test(clean)) {
+      H.update({ mode: "thinking", committedCommand: clean, transcript: "", liveHeard: "" });
+      const summary = await H.summarizePage();
+      if (summary) {
+        showSaid(summary);
+        H.update({ mode: "speaking" });
+        await H.speak(summary);
+      }
+      armFollowup();
+      setTimeout(() => H.update({ committedCommand: "", helmThought: "", mode: "idle" }), 500);
+      return;
+    }
+
     H.update({ mode: "thinking", committedCommand: clean, transcript: "", liveHeard: "" });
 
     const elements = H.collectElements();
@@ -317,13 +362,17 @@
   /* ---------- Settings live updates ---------- */
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg?.type === "helm:settings-changed") {
+      const prevLang = H.settings?.micLang;
       H.loadSettings().then(() => {
         render();
-        // If 'enabled' flipped to false, hide everything
         if (H.settings && H.settings.enabled === false) {
           root.style.display = "none";
         } else {
           root.style.display = "";
+          // Restart recognizer if mic language changed so new lang takes effect immediately
+          if (H.wantListening && H.settings?.micLang !== prevLang) {
+            H.startRecognizer();
+          }
         }
       });
     } else if (msg?.type === "helm:open-mic-toggle") {

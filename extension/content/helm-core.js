@@ -81,7 +81,7 @@
     const rec = new SR();
     rec.continuous = true;
     rec.interimResults = true;
-    rec.lang = "en-US";
+    rec.lang = H.settings?.micLang || "en-US";
     rec.onresult = (e) => {
       let interim = "", final = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -264,6 +264,19 @@ Search and typing:
     } catch {
       return { thought: "", speak: "", actions: [], clarify: "" };
     }
+  };
+
+  /* ---------- Page summarization ---------- */
+  H.summarizePage = async function () {
+    const pageText = (document.body?.innerText || "").trim().replace(/\s+/g, " ").slice(0, 4000);
+    if (!pageText) return "This page doesn't seem to have any readable text.";
+    const system = `You are Helm, a voice assistant in a browser. Summarize what the user is viewing in 2–4 short sentences. Be direct and conversational — you're speaking aloud, not writing. No lists, no markdown.`;
+    const user = `Page title: "${document.title}"\n\nPage content:\n${pageText}`;
+    const resp = await new Promise(resolve =>
+      chrome.runtime.sendMessage({ type: "helm:claude", system, user, model: H.settings?.model }, resolve)
+    );
+    if (!resp?.ok) return null;
+    return (resp.text || "").trim().slice(0, 600);
   };
 
   /* ---------- Pattern memory ---------- */

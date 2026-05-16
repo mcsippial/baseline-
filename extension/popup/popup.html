@@ -100,6 +100,21 @@
   }
   .warn b { color: var(--accent); }
   .warn[hidden] { display: none; }
+
+  .usage {
+    margin-top: 10px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11.5px;
+  }
+  .usage[hidden] { display: none; }
+  .usage-label { color: var(--mute); }
+  .usage-val { font-weight: 600; color: var(--paper); }
+  .usage-reset { color: var(--mute); background: none; border: 0; cursor: pointer; font: 500 11px inherit; padding: 0; }
+  .usage-reset:hover { color: var(--paper); }
 </style>
 </head>
 <body>
@@ -123,6 +138,11 @@
 
   <button class="btn primary" id="toggle">Turn Helm on</button>
   <button class="btn" id="openSettings">Settings</button>
+
+  <div class="usage" id="usage" hidden>
+    <div><span class="usage-label">API usage · </span><span class="usage-val" id="usageVal"></span></div>
+    <button class="usage-reset" id="resetUsage">Reset</button>
+  </div>
 
   <div class="footer">
     <span style="color: var(--mute)">Say <span class="kbd" id="wakeKbd">"yo"</span> on any page</span>
