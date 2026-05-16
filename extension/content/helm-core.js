@@ -211,8 +211,18 @@ Rules:
 - For repeated work, output each click as a separate action in order.
 - Use 'read' ONLY when the user explicitly asks Helm to read/say/tell/explain content. 'read' is the ONLY action that produces audible speech.
 - Use 'scroll' for navigation requests. Use 'key' for keyboard shortcuts.
-- DO NOT use the 'speak' action type and DO NOT set 'speak' on the response unless the user EXPLICITLY asked Helm to say/tell something verbally. The cursor moving is confirmation — never narrate.
-- Be concise. Be confident.`;
+- DO NOT set 'speak' unless the user EXPLICITLY asked Helm to say/tell something verbally. The cursor moving is confirmation — never narrate.
+- Be concise. Be confident.
+
+Link navigation:
+- Element labels include a destination hint like '→ /path' (same site) or '→ example.com' (external). Use 'click' on the matching link element to navigate.
+- If the user says 'go to', 'open', 'visit', or 'click [name]', find the best matching link or button and click it.
+
+Search and typing:
+- 'Search for X' or 'look up X': find the search input, type X, then ALWAYS follow with { "type": "key", "key": "Enter" } to submit.
+- 'Type X in [field]': focus the field and type X. Only add Enter if the user also says 'and search', 'and submit', or 'and send'.
+- Chat or AI prompt boxes (contenteditable or large textarea): use 'type' to enter text, then 'key' Enter to send if the user said 'send' or 'ask'.
+- Search inputs usually have placeholder text like 'Search', 'Find', 'Ask', or 'Query'. Pick the most prominent visible one.`;
 
     const elementsList = elements.map(e => {
       const sec = e.section ? ` (${e.section})` : "";

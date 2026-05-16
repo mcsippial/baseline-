@@ -6,13 +6,15 @@
   if (!H) return;
 
   const INTERACTIVE_SELECTOR = [
-    "button", "a[href]",
+    "a",                               // all anchors — catches SPA/React Router links without href
+    "button",
     "input:not([type='hidden'])", "textarea", "select",
     "[role='button']", "[role='link']", "[role='tab']",
     "[role='checkbox']", "[role='switch']",
     "[role='menuitem']", "[role='option']",
     "[tabindex]:not([tabindex='-1'])",
     "[contenteditable='true']",
+    "summary",
     "[data-helm-label]",
   ].join(",");
 
@@ -56,7 +58,16 @@
     const alt = el.getAttribute("alt");
     if (alt) return alt;
     const text = (el.innerText || el.textContent || "").trim().replace(/\s+/g, " ");
+    const href = el.getAttribute("href");
+    if (text && href) {
+      try {
+        const dest = new URL(href, location.href);
+        const suffix = dest.origin !== location.origin ? ` → ${dest.hostname}` : ` → ${dest.pathname}`;
+        return text.slice(0, 70) + suffix;
+      } catch { /* relative or invalid href, fall through */ }
+    }
     if (text) return text.slice(0, 80);
+    if (href) return `link → ${href.slice(0, 60)}`;
     const role = el.getAttribute("role");
     return `[${(role || el.tagName).toLowerCase()}]`;
   }
@@ -72,11 +83,14 @@
       seen.add(el);
       const label = deriveLabel(el).slice(0, 120);
       const text = (el.innerText || el.textContent || "").trim().replace(/\s+/g, " ").slice(0, 140);
+      const tag = el.tagName.toLowerCase();
+      const role = el.getAttribute("role") || "";
+      const kind = tag === "a" ? "link" : (role || tag || "el");
       items.push({
         id: items.length,
         label,
         section: sectionContext(el),
-        kind: ((el.getAttribute("role") || el.tagName || "el") + "").toLowerCase(),
+        kind,
         text: text && text !== label ? text : "",
         el,
       });
@@ -240,15 +254,31 @@
         const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
         const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
         for (let i = 1; i <= action.text.length; i++) {
+          const ch = action.text[i - 1];
           setter?.call(el, action.text.slice(0, i));
+          el.dispatchEvent(new KeyboardEvent("keydown", { key: ch, bubbles: true, cancelable: true }));
           el.dispatchEvent(new Event("input", { bubbles: true }));
+          el.dispatchEvent(new KeyboardEvent("keyup", { key: ch, bubbles: true }));
           await new Promise(r => setTimeout(r, 28));
         }
+        el.dispatchEvent(new Event("change", { bubbles: true }));
       } else if (el && el.isContentEditable) {
-        for (const ch of action.text) {
-          document.execCommand("insertText", false, ch);
-          await new Promise(r => setTimeout(r, 28));
+        // Try execCommand first (works in most Chromium-based editors)
+        const inserted = document.execCommand("insertText", false, action.text);
+        if (!inserted) {
+          // Fallback: manual range insertion for editors that block execCommand
+          const sel = window.getSelection();
+          if (sel && sel.rangeCount > 0) {
+            const range = sel.getRangeAt(0);
+            range.deleteContents();
+            range.insertNode(document.createTextNode(action.text));
+            range.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
         }
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
       }
       return;
     }
