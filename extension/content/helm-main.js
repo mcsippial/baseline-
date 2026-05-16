@@ -32,13 +32,12 @@
       </button>
     </div>
 
-    <div class="helm-said" data-helm-said hidden>
-      <span class="helm-said-mark">Helm</span>
-      <span class="helm-said-text" data-helm-said-text></span>
-      <button class="helm-said-x" data-helm-said-x>&times;</button>
-    </div>
-
     <form class="helm-textcmd" data-helm-textcmd hidden>
+      <div class="helm-textcmd-reply" data-helm-textcmd-reply hidden>
+        <span class="helm-textcmd-reply-mark">Helm</span>
+        <span class="helm-textcmd-reply-text" data-helm-textcmd-reply-text></span>
+        <button class="helm-textcmd-reply-x" type="button" data-helm-textcmd-reply-x>&times;</button>
+      </div>
       <svg class="helm-textcmd-logo" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
         <circle cx="10" cy="10" r="9" fill="rgba(255,138,61,0.18)" stroke="rgba(255,138,61,0.6)" stroke-width="1.2"/>
         <circle cx="10" cy="10" r="4" fill="#ff8a3d"/>
@@ -86,13 +85,13 @@
   const enableBtn  = $("[data-helm-enable]");
   const orbBtn     = $("[data-helm-orb]");
   const orbTextEl  = $("[data-helm-orb-text]");
-  const saidEl     = $("[data-helm-said]");
-  const saidTextEl = $("[data-helm-said-text]");
-  const saidX      = $("[data-helm-said-x]");
-  const textcmdEl     = $("[data-helm-textcmd]");
-  const textcmdInput  = $("[data-helm-textcmd-input]");
-  const textcmdSubmit = $("[data-helm-textcmd-submit]");
-  const textcmdMic    = $("[data-helm-textcmd-mic]");
+  const textcmdEl       = $("[data-helm-textcmd]");
+  const textcmdInput    = $("[data-helm-textcmd-input]");
+  const textcmdSubmit   = $("[data-helm-textcmd-submit]");
+  const textcmdMic      = $("[data-helm-textcmd-mic]");
+  const replyEl         = $("[data-helm-textcmd-reply]");
+  const replyTextEl     = $("[data-helm-textcmd-reply-text]");
+  const replyX          = $("[data-helm-textcmd-reply-x]");
   const confirmEl       = $("[data-helm-confirm]");
   const confirmLabelEl  = $("[data-helm-confirm-label]");
   const confirmProgress = $("[data-helm-confirm-progress]");
@@ -180,14 +179,6 @@
             : followupRemaining > 0
               ? `Follow-up · ${followupRemaining}s · click to stop`
               : `Listening for "${wakeWordLabel()}" · click to stop`;
-    }
-
-    // Said pill
-    if (H.state.saidText) {
-      saidEl.hidden = false;
-      saidTextEl.textContent = H.state.saidText;
-    } else {
-      saidEl.hidden = true;
     }
 
     // Text command bar state
@@ -532,9 +523,15 @@
 
   function showSaid(text) {
     if (!text) return;
-    H.update({ saidText: text });
+    replyTextEl.textContent = text;
+    replyEl.hidden = false;
+    textcmdEl.classList.add("has-reply");
     clearTimeout(saidTimer);
-    saidTimer = setTimeout(() => H.update({ saidText: "" }), Math.min(8000, 2200 + text.length * 35));
+    saidTimer = setTimeout(hideReply, Math.min(9000, 2400 + text.length * 38));
+  }
+  function hideReply() {
+    replyEl.hidden = true;
+    textcmdEl.classList.remove("has-reply");
   }
   H.showSaid = showSaid;
 
@@ -592,7 +589,7 @@
   /* ---------- UI events ---------- */
   enableBtn.addEventListener("click", () => { H.sessionActive = true; H.requestMicAndStart(); });
   orbBtn.addEventListener("click", () => H.stopAll());
-  saidX.addEventListener("click", () => H.update({ saidText: "" }));
+  replyX.addEventListener("click", () => { clearTimeout(saidTimer); hideReply(); });
 
   textcmdMic.addEventListener("click", () => {
     if (textbarRec) { try { textbarRec.stop(); } catch {} return; }
