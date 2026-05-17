@@ -197,8 +197,20 @@
     H.cursorPos.x = e.clientX; H.cursorPos.y = e.clientY;
   });
 
-  /* ---------- Tab visibility — only the active tab runs the recognizer ---------- */
+  /* ---------- Single-recognizer arbitration ---------- */
+  // The background service worker tells us whether this is the focused tab.
+  // Only the focused tab runs the speech recognizer — see helm-core.js.
   document.addEventListener("visibilitychange", () => H.handleVisibilityChange?.());
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (msg?.type === "helm:mic-owner") H.setMicOwner?.(!!msg.owner);
+  });
+  // Ask the background who owns the mic right now (handles initial page load).
+  try {
+    chrome.runtime.sendMessage({ type: "helm:am-i-mic-owner" }, (r) => {
+      if (chrome.runtime.lastError) return;
+      H.setMicOwner?.(!!r?.owner);
+    });
+  } catch {}
 
   /* ---------- Push-to-talk via Space ---------- */
   window.addEventListener("keydown", (e) => {

@@ -130,16 +130,12 @@
         console.log(`[Helm] recognizer ended after ${lived}ms`);
         H.update({ recOk: false });
         const backoff = lived < 1000 ? 1200 : 600;
-        // Only restart if this tab is still the visible one — background tabs
-        // must not run a recognizer or they fight the active tab for the mic.
-        if (H.wantListening && !H._restartPending && !H._pausedForHidden
-            && document.visibilityState === "visible") {
+        // Only restart if this tab is allowed to record (the focused tab).
+        if (H.wantListening && !H._restartPending && H.canRecord()) {
           H._restartPending = true;
           setTimeout(() => {
             H._restartPending = false;
-            if (H.wantListening && !H._pausedForHidden && document.visibilityState === "visible") {
-              H.startRecognizer();
-            }
+            if (H.wantListening && H.canRecord()) H.startRecognizer();
           }, backoff);
         }
       },
@@ -168,31 +164,40 @@
     }
     H.wantListening = true;
     H.update({ mode: "idle", lastError: "" });
-    // Only the visible tab runs the recognizer — see visibility handler below.
-    if (document.visibilityState === "visible") {
-      H._pausedForHidden = false;
-      H.startRecognizer();
+    if (H.canRecord()) H.startRecognizer();
+  };
+
+  /* ---------- Single-recognizer arbitration ----------
+   * Chrome allows only ONE active SpeechRecognition at a time. With multiple
+   * Helm tabs open, each tab's recognizer aborts the others. The background
+   * service worker is the single source of truth for which tab is focused;
+   * it sets H._isMicOwner via the "helm:mic-owner" message. A tab may only
+   * run the recognizer when it is BOTH the mic owner AND visible.            */
+  H._isMicOwner = (document.visibilityState === "visible"); // initial guess until background confirms
+
+  H.canRecord = function () {
+    return H._isMicOwner === true && document.visibilityState === "visible";
+  };
+
+  // Called by the background's focus broadcast and by the local visibility handler.
+  H.refreshRecorderState = function () {
+    if (H.wantListening && H.canRecord()) {
+      if (!H.recognizer || !H.state.recOk) {
+        if (!H._restartPending) H.startRecognizer();
+      }
     } else {
-      H._pausedForHidden = true;
+      H._restartPending = false;
+      try { H.recognizer?.stop(); } catch {}
     }
   };
 
-  // Pause the recognizer when the tab is backgrounded; resume when it returns.
-  // Multiple Helm tabs would otherwise each hold a recognizer and abort one
-  // another's mic access (Chrome allows only one active recognizer at a time).
+  H.setMicOwner = function (isOwner) {
+    H._isMicOwner = !!isOwner;
+    H.refreshRecorderState();
+  };
+
   H.handleVisibilityChange = function () {
-    if (document.visibilityState === "hidden") {
-      if (H.wantListening) {
-        H._pausedForHidden = true;
-        H._restartPending = false;
-        try { H.recognizer?.stop(); } catch {}
-      }
-    } else if (document.visibilityState === "visible") {
-      if (H.wantListening && H._pausedForHidden) {
-        H._pausedForHidden = false;
-        H.startRecognizer();
-      }
-    }
+    H.refreshRecorderState();
   };
 
   H.stopAll = function () {

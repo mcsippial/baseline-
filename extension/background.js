@@ -307,6 +307,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     getSettings().then(sendResponse);
     return true;
   }
+  if (msg?.type === "helm:am-i-mic-owner") {
+    getActiveTabId().then(id => sendResponse({ owner: !!sender.tab?.id && sender.tab.id === id }));
+    return true;
+  }
   if (msg?.type === "helm:claude") {
     callAnthropic({ system: msg.system, user: msg.user, userContent: msg.userContent, model: msg.model })
       .then(sendResponse);
@@ -373,6 +377,33 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 });
+
+/* ---------- Single-recognizer arbitration ----------
+ * Chrome allows only one active SpeechRecognition system-wide. The background
+ * is the single source of truth for which tab is focused; it tells every tab
+ * whether it owns the mic so background tabs pause their recognizer.        */
+async function getActiveTabId() {
+  try {
+    const win = await chrome.windows.getLastFocused();
+    if (!win || win.focused === false) return null;
+    const [tab] = await chrome.tabs.query({ active: true, windowId: win.id });
+    return tab?.id ?? null;
+  } catch { return null; }
+}
+
+async function broadcastMicOwner() {
+  const activeId = await getActiveTabId();
+  let tabs = [];
+  try { tabs = await chrome.tabs.query({}); } catch { return; }
+  for (const tab of tabs) {
+    if (!tab.id) continue;
+    chrome.tabs.sendMessage(tab.id, { type: "helm:mic-owner", owner: tab.id === activeId })
+      .catch(() => { /* tab has no content script — fine */ });
+  }
+}
+
+chrome.tabs.onActivated.addListener(broadcastMicOwner);
+chrome.windows.onFocusChanged.addListener(broadcastMicOwner);
 
 // Inject content scripts into already-open tabs. Chrome only auto-injects
 // content scripts into pages loaded AFTER the extension is installed/updated —
