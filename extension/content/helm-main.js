@@ -4,6 +4,7 @@
  */
 (function () {
   if (window !== window.top) return; // don't mount overlay inside iframes
+  if (document.querySelector("[data-helm-overlay]")) return; // another instance already mounted
   const H = window.__helm;
   if (!H) return;
 
@@ -125,11 +126,18 @@
     // Cursor classes
     cursorEl.className = `helm-cursor mode-${mode} personality-${s.personality || "subtle"}`;
 
-    // HUD orb
+    // HUD orb / enable button
     if (mode === "offline") {
       enableBtn.hidden = false;
       orbBtn.hidden = true;
       textcmdEl.hidden = true;
+      if (lastError === "mic-blocked") {
+        enableBtn.innerHTML = `<span class="helm-enable-dot" style="background:#f87171"></span> Mic blocked — click 🔒 to allow`;
+        enableBtn.title = "Chrome blocked the mic for this site. Click the lock icon in the address bar → Site settings → Microphone → Allow, then click here.";
+      } else {
+        enableBtn.innerHTML = `<span class="helm-enable-dot"></span> Enable Helm`;
+        enableBtn.title = "";
+      }
     } else {
       enableBtn.hidden = true;
       orbBtn.hidden = false;
