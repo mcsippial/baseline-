@@ -290,22 +290,33 @@
         }
         el.dispatchEvent(new Event("change", { bubbles: true }));
       } else if (el && el.isContentEditable) {
-        // Try execCommand first (works in most Chromium-based editors)
-        const inserted = document.execCommand("insertText", false, action.text);
-        if (!inserted) {
-          // Fallback: manual range insertion for editors that block execCommand
-          const sel = window.getSelection();
-          if (sel && sel.rangeCount > 0) {
-            const range = sel.getRangeAt(0);
-            range.deleteContents();
-            range.insertNode(document.createTextNode(action.text));
-            range.collapse(false);
-            sel.removeAllRanges();
-            sel.addRange(range);
+        // ProseMirror (Claude.ai) and most React editors handle paste events
+        // better than execCommand — they normalise whitespace/newlines correctly
+        // and update their internal state reliably.
+        await new Promise(r => setTimeout(r, 60)); // let focus settle
+        const dt = new DataTransfer();
+        dt.setData("text/plain", action.text);
+        const pasted = el.dispatchEvent(
+          new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true })
+        );
+        // If nothing appeared (paste was not handled), fall back to execCommand
+        if (!el.textContent.includes(action.text.slice(0, 10))) {
+          const inserted = document.execCommand("insertText", false, action.text);
+          if (!inserted) {
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+              const range = sel.getRangeAt(0);
+              range.deleteContents();
+              range.insertNode(document.createTextNode(action.text));
+              range.collapse(false);
+              sel.removeAllRanges();
+              sel.addRange(range);
+            }
           }
         }
         el.dispatchEvent(new Event("input", { bubbles: true }));
         el.dispatchEvent(new Event("change", { bubbles: true }));
+        await new Promise(r => setTimeout(r, 80)); // let React/ProseMirror settle before next action
       }
       return;
     }

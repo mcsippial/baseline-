@@ -271,6 +271,73 @@
     { re: /\bzoom\s+out\b/i,                                      fn: () => { const z = parseFloat(document.body.style.zoom || "1"); document.body.style.zoom = Math.max(z - 0.15, 0.3).toFixed(2); } },
     { re: /\b(reset\s+zoom|zoom\s+reset|zoom\s+normal)\b/i,       fn: () => { document.body.style.zoom = ""; } },
   ];
+  /* ---------- Claude-site quick commands ---------- */
+  const ON_CLAUDE = location.hostname === "claude.ai" || location.hostname.endsWith(".claude.ai");
+
+  function claudeInput() {
+    // Claude.ai's ProseMirror chat box — biggest contenteditable on the page, not inside Helm overlay
+    return Array.from(document.querySelectorAll("[contenteditable='true']"))
+      .filter(el => !el.closest("[data-helm-overlay]") && el.offsetParent !== null)
+      .sort((a, b) => (b.offsetWidth * b.offsetHeight) - (a.offsetWidth * a.offsetHeight))[0] || null;
+  }
+
+  async function typeIntoClaudeInput(text, andSend) {
+    const inp = claudeInput();
+    if (!inp) return false;
+    inp.focus();
+    await new Promise(r => setTimeout(r, 80));
+    const dt = new DataTransfer();
+    dt.setData("text/plain", text);
+    inp.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
+    if (!inp.textContent.includes(text.slice(0, 10))) {
+      document.execCommand("insertText", false, text);
+    }
+    inp.dispatchEvent(new Event("input", { bubbles: true }));
+    if (andSend) {
+      await new Promise(r => setTimeout(r, 120));
+      inp.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true }));
+      inp.dispatchEvent(new KeyboardEvent("keyup",   { key: "Enter", code: "Enter", bubbles: true }));
+    }
+    return true;
+  }
+
+  async function tryClaudeCommand(text) {
+    if (!ON_CLAUDE) return false;
+    // "new chat" / "start new conversation"
+    if (/\b(new\s+chat|new\s+conversation|start\s+(a\s+)?(new|fresh)(\s+chat|\s+conversation)?)\b/i.test(text)) {
+      const btn = Array.from(document.querySelectorAll("button, a"))
+        .find(el => /new\s*chat|new\s*conversation/i.test(el.getAttribute("aria-label") || el.innerText || ""));
+      if (btn) { btn.click(); showSaid("Starting new chat."); return true; }
+    }
+    // "read Claude's response" / "what did Claude say"
+    if (/\b(read|what\s+did\s+claude\s+say|read\s+(claude'?s?|the\s+)?(response|reply|answer|last\s+message))\b/i.test(text)) {
+      const msgs = Array.from(document.querySelectorAll(
+        "[data-testid='assistant-message'], .font-claude-message, [class*='AssistantMessage'], [class*='assistant-message']"
+      )).filter(el => el.offsetParent !== null);
+      const last = msgs[msgs.length - 1];
+      if (last) {
+        const t = (last.innerText || last.textContent || "").trim().replace(/\s+/g, " ").slice(0, 600);
+        showSaid(t.slice(0, 200));
+        if (H.settings?.voiceReplies) { H.update({ mode: "speaking" }); await H.speak(t); }
+        return true;
+      }
+    }
+    // "ask Claude X" / "send X to Claude" / "tell Claude X"
+    const askM = text.match(/\b(?:ask|send|tell)\s+claude\s+(.+)/i);
+    if (askM) {
+      const sent = await typeIntoClaudeInput(askM[1].trim(), true);
+      if (sent) { showSaid(`Sending to Claude…`); return true; }
+    }
+    // "type X" / "type X in the chat" (Claude context)
+    const typeM = text.match(/^type\s+(.+?)(?:\s+in(?:to)?\s+(?:the\s+)?(?:chat|input|box))?$/i);
+    if (typeM) {
+      const send = /\bsend\b|\bsubmit\b/i.test(text);
+      const sent = await typeIntoClaudeInput(typeM[1].trim(), send);
+      if (sent) return true;
+    }
+    return false;
+  }
+
   const SUMMARIZE_RE = /\b(summarize|give\s+me\s+a\s+summary|what'?s?\s+on\s+this\s+page|explain\s+this\s+page|what\s+(does\s+this|is\s+this)\s+(page\s+)?(say|about|do)|describe\s+this\s+page|what\s+is\s+this\s+(page\s+)?about)\b/i;
   const SELECTION_READ_RE = /\b(read\s+(that|this|the\s+selection|selected\s+text|what\s+(i|you)'?ve?\s+selected)|read\s+what'?s?\s+selected)\b/i;
 
@@ -423,6 +490,13 @@
 
     // Tab commands — routed through background, needs tabs permission
     if (await tryTabCommand(clean)) {
+      H.update({ mode: "idle", liveHeard: "", committedCommand: "", transcript: "" });
+      armFollowup();
+      return;
+    }
+
+    // Claude-site commands — instant, no API call
+    if (await tryClaudeCommand(clean)) {
       H.update({ mode: "idle", liveHeard: "", committedCommand: "", transcript: "" });
       armFollowup();
       return;

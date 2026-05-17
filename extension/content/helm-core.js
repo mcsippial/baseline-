@@ -196,7 +196,29 @@
   };
 
   /* ---------- Claude orchestrator (via background) ---------- */
+
+  function getSiteHints() {
+    const host = location.hostname;
+    const path = location.pathname;
+    if (host === "claude.ai" || host.endsWith(".claude.ai")) {
+      const isCode = path.startsWith("/code");
+      return `
+CURRENT SITE: ${isCode ? "Claude Code (claude.ai/code)" : "Claude.ai"} — Anthropic's AI chat interface.
+Key UI facts:
+- The user's message input is a ProseMirror contenteditable div, usually the largest [contenteditable] near the bottom of the page. Focus it, type, then press Enter to send.
+- "Ask Claude X" / "send X to Claude" / "tell Claude X" = type X into the input then press Enter.
+- "New chat" or "start fresh" = click the "New chat" button in the left sidebar.
+- "Read Claude's response" / "what did Claude say" = use { "type": "read", "id": <last assistant message element> }.
+- After typing into the input, always submit with { "type": "key", "key": "Enter" } — do NOT click the send button (unreliable).
+- "Switch model" or "change model" = click the model-picker button near the input.
+- The user may want to feed Helm's output back into Claude: if unsure, type the answer into the chat input.
+`;
+    }
+    return "";
+  }
+
   H.askClaude = async function ({ command, elements, recent, screen, viewportSummary, selectedText }) {
+    const siteHints = getSiteHints();
     const system = `You are Helm, an AI cursor inside a browser. The user has spoken a command.
 Respond with a JSON object describing what to do. No prose, no markdown, just JSON.
 
@@ -240,7 +262,7 @@ Search and typing:
 - 'Search for X' or 'look up X': find the search input, type X, then ALWAYS follow with { "type": "key", "key": "Enter" } to submit.
 - 'Type X in [field]': focus the field and type X. Only add Enter if the user also says 'and search', 'and submit', or 'and send'.
 - Chat or AI prompt boxes (contenteditable or large textarea): use 'type' to enter text, then 'key' Enter to send if the user said 'send' or 'ask'.
-- Search inputs usually have placeholder text like 'Search', 'Find', 'Ask', or 'Query'. Pick the most prominent visible one.`;
+- Search inputs usually have placeholder text like 'Search', 'Find', 'Ask', or 'Query'. Pick the most prominent visible one.${siteHints ? "\n\n" + siteHints : ""}`;
 
     const elementsList = elements.map(e => {
       const sec = e.section ? ` (${e.section})` : "";
