@@ -122,9 +122,15 @@
       onStart: () => H.update({ recOk: true, lastError: "" }),
       onEnd: () => {
         H.update({ recOk: false });
-        // Create a fresh recognizer instance — reusing the same rec is unreliable in Chrome
-        if (H.wantListening) {
-          setTimeout(() => { if (H.wantListening) H.startRecognizer(); }, 200);
+        // Restart after a longer gap so Chrome's tab mic indicator doesn't
+        // flash on/off. The getUserMedia stream (held in H._micStream) keeps
+        // the indicator solid while SpeechRecognition cycles underneath.
+        if (H.wantListening && !H._restartPending) {
+          H._restartPending = true;
+          setTimeout(() => {
+            H._restartPending = false;
+            if (H.wantListening) H.startRecognizer();
+          }, 800);
         }
       },
     });
@@ -138,14 +144,16 @@
 
   H.requestMicAndStart = async function (promptPermission = false) {
     if (promptPermission) {
-      // Only call getUserMedia when we have a user gesture (e.g. Enable button click).
-      // This triggers Chrome's mic-permission dialog on origins that haven't yet
-      // granted access. We discard the stream immediately — we only need the prompt.
+      // Trigger Chrome's mic-permission dialog on first use, then keep the stream
+      // open. A live getUserMedia stream holds Chrome's tab mic indicator solid —
+      // without it the indicator flashes on/off every time SpeechRecognition
+      // cycles (every ~30-60s). Stream is stopped in stopAll.
+      if (H._micStream) H._micStream.getTracks().forEach(t => t.stop());
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(t => t.stop());
-      } catch (err) {
-        // denied or unavailable — SpeechRecognition will surface "not-allowed"
+        H._micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch {
+        H._micStream = null;
+        // denied — SpeechRecognition will surface "not-allowed" and go offline
       }
     }
     H.wantListening = true;
@@ -156,6 +164,8 @@
   H.stopAll = function () {
     H.wantListening = false;
     H.sessionActive = false;
+    H._restartPending = false;
+    if (H._micStream) { H._micStream.getTracks().forEach(t => t.stop()); H._micStream = null; }
     try { H.recognizer?.stop(); } catch {}
     H.update({ mode: "offline" });
   };
