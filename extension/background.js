@@ -374,6 +374,29 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
+// Inject content scripts into already-open tabs. Chrome only auto-injects
+// content scripts into pages loaded AFTER the extension is installed/updated —
+// tabs that were already open keep running the old (or no) scripts until
+// reloaded. Doing this on install/update means the user doesn't have to
+// manually refresh every tab.
+async function injectIntoOpenTabs() {
+  let tabs = [];
+  try { tabs = await chrome.tabs.query({}); } catch { return; }
+  for (const tab of tabs) {
+    if (!tab.id || !tab.url || !/^https?:\/\//.test(tab.url)) continue;
+    try {
+      await chrome.scripting.insertCSS({
+        target: { tabId: tab.id, allFrames: true },
+        files: ["content/helm.css"],
+      });
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id, allFrames: true },
+        files: ["content/helm-core.js", "content/helm-dom.js", "content/helm-main.js"],
+      });
+    } catch { /* protected page (chrome store, etc.) — skip silently */ }
+  }
+}
+
 // First-install: open onboarding wizard so user can paste their API key and choose wake word.
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") {
@@ -390,6 +413,8 @@ chrome.runtime.onInstalled.addListener((details) => {
     });
     chrome.tabs.create({ url: chrome.runtime.getURL("onboarding/onboarding.html") });
   }
+  // Runs on both fresh install and update/reload — refreshes every open tab's scripts
+  injectIntoOpenTabs();
 });
 
 // Broadcast settings changes to all content scripts so they react live.
