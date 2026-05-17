@@ -197,6 +197,9 @@
     H.cursorPos.x = e.clientX; H.cursorPos.y = e.clientY;
   });
 
+  /* ---------- Tab visibility — only the active tab runs the recognizer ---------- */
+  document.addEventListener("visibilitychange", () => H.handleVisibilityChange?.());
+
   /* ---------- Push-to-talk via Space ---------- */
   window.addEventListener("keydown", (e) => {
     if (e.code === "Space" && !e.repeat

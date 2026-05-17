@@ -126,14 +126,17 @@
         const lived = Date.now() - (H._recStartedAt || 0);
         console.log(`[Helm] recognizer ended after ${lived}ms`);
         H.update({ recOk: false });
-        // If the recognizer keeps dying within ~1s of starting, something is
-        // wrong (mic conflict, another recognizer). Back off so we don't spin.
-        const backoff = lived < 1000 ? 2500 : 600;
-        if (H.wantListening && !H._restartPending) {
+        const backoff = lived < 1000 ? 1200 : 600;
+        // Only restart if this tab is still the visible one — background tabs
+        // must not run a recognizer or they fight the active tab for the mic.
+        if (H.wantListening && !H._restartPending && !H._pausedForHidden
+            && document.visibilityState === "visible") {
           H._restartPending = true;
           setTimeout(() => {
             H._restartPending = false;
-            if (H.wantListening) H.startRecognizer();
+            if (H.wantListening && !H._pausedForHidden && document.visibilityState === "visible") {
+              H.startRecognizer();
+            }
           }, backoff);
         }
       },
@@ -162,7 +165,31 @@
     }
     H.wantListening = true;
     H.update({ mode: "idle", lastError: "" });
-    H.startRecognizer();
+    // Only the visible tab runs the recognizer — see visibility handler below.
+    if (document.visibilityState === "visible") {
+      H._pausedForHidden = false;
+      H.startRecognizer();
+    } else {
+      H._pausedForHidden = true;
+    }
+  };
+
+  // Pause the recognizer when the tab is backgrounded; resume when it returns.
+  // Multiple Helm tabs would otherwise each hold a recognizer and abort one
+  // another's mic access (Chrome allows only one active recognizer at a time).
+  H.handleVisibilityChange = function () {
+    if (document.visibilityState === "hidden") {
+      if (H.wantListening) {
+        H._pausedForHidden = true;
+        H._restartPending = false;
+        try { H.recognizer?.stop(); } catch {}
+      }
+    } else if (document.visibilityState === "visible") {
+      if (H.wantListening && H._pausedForHidden) {
+        H._pausedForHidden = false;
+        H.startRecognizer();
+      }
+    }
   };
 
   H.stopAll = function () {
