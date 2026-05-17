@@ -461,6 +461,16 @@
     if (listenTimer) { clearTimeout(listenTimer); listenTimer = null; }
     const clean = text.trim().replace(/[.!?]+$/, "");
     if (!clean) { H.update({ mode: "idle", liveHeard: "" }); return; }
+    try {
+      await _commitCommand(clean);
+    } catch (err) {
+      console.warn("[Helm] commitCommand crashed — resetting to idle:", err);
+      H.update({ mode: "idle", liveHeard: "", transcript: "", committedCommand: "", helmThought: "" });
+      armFollowup();
+    }
+  }
+
+  async function _commitCommand(clean) {
 
     // Capture any text the user has highlighted on the page at the moment they spoke
     const selectedText = window.getSelection()?.toString().trim() || "";

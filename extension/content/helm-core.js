@@ -335,10 +335,15 @@ Search and typing:
     }
 
     const resp = await new Promise(resolve => {
-      chrome.runtime.sendMessage(
-        { type: "helm:claude", system, userContent: Array.isArray(userContent) ? userContent : undefined, user: Array.isArray(userContent) ? undefined : userContent, model: H.settings?.model },
-        resolve
-      );
+      // 25s timeout guards against the background service worker being killed
+      // (MV3 workers idle out after 5 min) or any other hung response.
+      const t = setTimeout(() => resolve(null), 25000);
+      try {
+        chrome.runtime.sendMessage(
+          { type: "helm:claude", system, userContent: Array.isArray(userContent) ? userContent : undefined, user: Array.isArray(userContent) ? undefined : userContent, model: H.settings?.model },
+          (r) => { clearTimeout(t); resolve(chrome.runtime.lastError ? null : r); }
+        );
+      } catch { clearTimeout(t); resolve(null); }
     });
 
     if (!resp?.ok) {
@@ -371,9 +376,13 @@ Search and typing:
     if (!pageText) return "This page doesn't seem to have any readable text.";
     const system = `You are Helm, a voice assistant in a browser. Summarize what the user is viewing in 2–4 short sentences. Be direct and conversational — you're speaking aloud, not writing. No lists, no markdown.`;
     const user = `Page title: "${document.title}"\n\nPage content:\n${pageText}`;
-    const resp = await new Promise(resolve =>
-      chrome.runtime.sendMessage({ type: "helm:claude", system, user, model: H.settings?.model }, resolve)
-    );
+    const resp = await new Promise(resolve => {
+      const t = setTimeout(() => resolve(null), 25000);
+      try {
+        chrome.runtime.sendMessage({ type: "helm:claude", system, user, model: H.settings?.model },
+          (r) => { clearTimeout(t); resolve(chrome.runtime.lastError ? null : r); });
+      } catch { clearTimeout(t); resolve(null); }
+    });
     if (!resp?.ok) return null;
     return (resp.text || "").trim().slice(0, 600);
   };
