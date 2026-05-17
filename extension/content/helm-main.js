@@ -19,7 +19,6 @@
       <div class="helm-halo"></div>
       <div class="helm-ring"></div>
       <div class="helm-ring helm-ring-2"></div>
-      <div class="helm-pill" data-helm-pill hidden></div>
     </div>
 
     <div class="helm-hud" data-helm-hud>
@@ -83,7 +82,6 @@
 
   const $ = (sel) => root.querySelector(sel);
   const cursorEl   = $("[data-helm-cursor]");
-  const pillEl     = $("[data-helm-pill]");
   const enableBtn  = $("[data-helm-enable]");
   const orbBtn     = $("[data-helm-orb]");
   const orbTextEl  = $("[data-helm-orb-text]");
@@ -127,24 +125,6 @@
     // Cursor classes
     cursorEl.className = `helm-cursor mode-${mode} personality-${s.personality || "subtle"}`;
 
-    // Pill near cursor
-    if (mode === "offline" || mode === "idle") {
-      pillEl.hidden = true;
-    } else {
-      pillEl.hidden = false;
-      pillEl.className = `helm-pill helm-pill-${mode}`;
-      if (mode === "listening") {
-        pillEl.textContent = transcript ? `"${transcript}"` : "Listening…";
-      } else if (mode === "thinking") {
-        pillEl.innerHTML = `<span class="helm-dots"><i></i><i></i><i></i></span>` +
-                           (committedCommand ? `<span class="helm-cmd">${escape(committedCommand)}</span>` : "");
-      } else if (mode === "acting") {
-        pillEl.textContent = helmThought || "Acting…";
-      } else if (mode === "speaking") {
-        pillEl.innerHTML = `<span class="helm-wave"><i></i><i></i><i></i><i></i></span>`;
-      }
-    }
-
     // HUD orb
     if (mode === "offline") {
       enableBtn.hidden = false;
@@ -164,13 +144,21 @@
 
       orbTextEl.textContent = liveHeard
         ? liveHeard
-        : (s.openMic
-            ? "open mic"
-            : H.sessionActive
-              ? "ready"
-              : followupRemaining > 0
-                ? `${followupRemaining}s`
-                : `say "${wakeWordLabel()}"`);
+        : mode === "thinking"
+          ? "thinking…"
+          : mode === "acting"
+            ? (helmThought || "acting…")
+            : mode === "speaking"
+              ? "speaking…"
+              : mode === "listening"
+                ? (transcript ? `"${transcript}"` : "listening…")
+                : s.openMic
+                  ? "open mic"
+                  : H.sessionActive
+                    ? "ready — just speak"
+                    : followupRemaining > 0
+                      ? `follow-up · ${followupRemaining}s`
+                      : `say "${wakeWordLabel()}"`;
 
       orbBtn.title = !recOk
         ? (lastError ? `Mic: ${lastError}` : "Starting mic…")
@@ -589,7 +577,7 @@
   }
 
   /* ---------- UI events ---------- */
-  enableBtn.addEventListener("click", () => { H.sessionActive = true; H.requestMicAndStart(); });
+  enableBtn.addEventListener("click", () => { H.sessionActive = true; H.requestMicAndStart(true); });
   orbBtn.addEventListener("click", () => H.stopAll());
   replyX.addEventListener("click", () => { clearTimeout(saidTimer); hideReply(); });
 
@@ -643,7 +631,7 @@
     } else if (msg?.type === "helm:open-mic-toggle") {
       H.loadSettings().then(render);
     } else if (msg?.type === "helm:enable") {
-      H.requestMicAndStart();
+      H.requestMicAndStart(true);
     } else if (msg?.type === "helm:disable") {
       H.stopAll();
     }
@@ -657,9 +645,9 @@
       return;
     }
     render();
-    // Auto-start on every new page when Helm is enabled.
-    // getUserMedia will succeed silently if mic permission was already granted
-    // for this origin; if not, it fails gracefully and shows the Enable button.
-    H.requestMicAndStart();
+    // Auto-start: no user gesture available so skip the permission prompt.
+    // If mic is already granted this succeeds; if not, the Enable button click
+    // will trigger getUserMedia with a real user gesture.
+    H.requestMicAndStart(false);
   });
 })();
