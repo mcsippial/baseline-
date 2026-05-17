@@ -15,13 +15,6 @@
   root.setAttribute("data-helm-overlay", "");
   root.className = "helm-root";
   root.innerHTML = `
-    <div class="helm-cursor mode-offline personality-subtle" data-helm-cursor>
-      <div class="helm-core"></div>
-      <div class="helm-halo"></div>
-      <div class="helm-ring"></div>
-      <div class="helm-ring helm-ring-2"></div>
-    </div>
-
     <div class="helm-hud" data-helm-hud>
       <button class="helm-enable" data-helm-enable>
         <span class="helm-enable-dot"></span> Enable Helm
@@ -36,7 +29,6 @@
       <div class="helm-textcmd-reply" data-helm-textcmd-reply hidden>
         <span class="helm-textcmd-reply-mark">Helm</span>
         <span class="helm-textcmd-reply-text" data-helm-textcmd-reply-text></span>
-        <button class="helm-textcmd-reply-x" type="button" data-helm-textcmd-reply-x>&times;</button>
       </div>
       <div class="helm-textcmd-row">
         <svg class="helm-textcmd-logo" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -82,7 +74,6 @@
   mount();
 
   const $ = (sel) => root.querySelector(sel);
-  const cursorEl   = $("[data-helm-cursor]");
   const enableBtn  = $("[data-helm-enable]");
   const orbBtn     = $("[data-helm-orb]");
   const orbTextEl  = $("[data-helm-orb-text]");
@@ -92,7 +83,6 @@
   const textcmdMic      = $("[data-helm-textcmd-mic]");
   const replyEl         = $("[data-helm-textcmd-reply]");
   const replyTextEl     = $("[data-helm-textcmd-reply-text]");
-  const replyX          = $("[data-helm-textcmd-reply-x]");
   const confirmEl       = $("[data-helm-confirm]");
   const confirmLabelEl  = $("[data-helm-confirm-label]");
   const confirmProgress = $("[data-helm-confirm-progress]");
@@ -108,9 +98,7 @@
   let confirmTicker = null;
   H.pendingConfirm = null;
 
-  H.renderCursor = function () {
-    cursorEl.style.transform = `translate3d(${H.cursorPos.x}px, ${H.cursorPos.y}px, 0)`;
-  };
+  H.renderCursor = function () { /* cursor visual removed */ };
 
   function wakeWordLabel() {
     const s = H.settings || {};
@@ -122,9 +110,6 @@
   function render() {
     const { mode, recOk, lastError, liveHeard, transcript, committedCommand, helmThought } = H.state;
     const s = H.settings || {};
-
-    // Cursor classes
-    cursorEl.className = `helm-cursor mode-${mode} personality-${s.personality || "subtle"}`;
 
     // HUD orb / enable button
     if (mode === "offline") {
@@ -194,14 +179,12 @@
   function escape(s) { return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;" }[c])); }
 
   H.onChange.add(render);
-  H.renderCursor();
   render();
 
-  /* ---------- Mouse tracking (when AI isn't driving) ---------- */
+  /* ---------- Mouse tracking (position still tracked for glideTo clicks) ---------- */
   window.addEventListener("mousemove", (e) => {
     if (H.aiDriving) return;
     H.cursorPos.x = e.clientX; H.cursorPos.y = e.clientY;
-    H.renderCursor();
   });
 
   /* ---------- Push-to-talk via Space ---------- */
@@ -587,7 +570,7 @@
   /* ---------- UI events ---------- */
   enableBtn.addEventListener("click", () => { H.sessionActive = true; H.requestMicAndStart(true); });
   orbBtn.addEventListener("click", () => H.stopAll());
-  replyX.addEventListener("click", () => { clearTimeout(saidTimer); hideReply(); });
+  // reply auto-dismisses on timer — no X button
 
   textcmdMic.addEventListener("click", () => {
     if (textbarRec) { try { textbarRec.stop(); } catch {} return; }

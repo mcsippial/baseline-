@@ -25,90 +25,8 @@
   text-shadow: none !important;
 }
 
-/* ---------- Cursor ---------- */
-[data-helm-cursor] {
-  position: fixed;
-  left: 0; top: 0;
-  width: 0; height: 0;
-  z-index: 2147483646;
-  pointer-events: none;
-  will-change: transform;
-  --core: 16px;
-}
-[data-helm-cursor] .helm-core {
-  position: absolute; left: 0; top: 0;
-  width: var(--core); height: var(--core);
-  margin-left: calc(var(--core) * -0.5);
-  margin-top:  calc(var(--core) * -0.5);
-  border-radius: 50%;
-  background: #fff;
-  /* layered shadow: dark border → orange ring → outer dark → glow
-     visible on both white and black pages */
-  box-shadow:
-    0 0 0 2px rgba(0,0,0,0.85),
-    0 0 0 4px rgba(255,138,61, 0.9),
-    0 0 0 5px rgba(0,0,0,0.25),
-    0 0 22px rgba(255,138,61, 0.65);
-  animation: helm-breathe 3.2s ease-in-out infinite;
-}
-[data-helm-cursor] .helm-halo {
-  position: absolute; left: -24px; top: -24px;
-  width: 48px; height: 48px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,138,61,0.30) 0%, rgba(255,138,61,0) 70%);
-  filter: blur(3px); opacity: 0.8;
-  transition: opacity 240ms ease;
-}
-[data-helm-cursor] .helm-ring {
-  position: absolute; left: -28px; top: -28px;
-  width: 56px; height: 56px; border-radius: 50%;
-  border: 2px solid rgba(255,138,61, 0.55);
-  opacity: 0; transform: scale(0.7);
-  transition: opacity 260ms ease, transform 260ms ease;
-}
-[data-helm-cursor] .helm-ring-2 {
-  left: -38px; top: -38px;
-  width: 76px; height: 76px;
-  border: 1.5px dashed rgba(255,138,61, 0.25);
-}
-
-[data-helm-cursor].mode-offline .helm-halo { opacity: 0; }
-[data-helm-cursor].mode-offline .helm-core {
-  background: #c8c3ba;
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.7), 0 0 0 3px rgba(180,175,165,0.5);
-  animation: none;
-}
-[data-helm-cursor].mode-idle .helm-halo { opacity: 0.6; }
-[data-helm-cursor].mode-listening .helm-halo { opacity: 1; }
-[data-helm-cursor].mode-listening .helm-ring { opacity: 1; transform: scale(1); animation: helm-ring-spin 3.6s linear infinite; }
-[data-helm-cursor].mode-listening .helm-ring-2 { opacity: 1; transform: scale(1); animation: helm-ring-spin 5s linear infinite reverse; }
-[data-helm-cursor].mode-listening .helm-core {
-  box-shadow:
-    0 0 0 2px rgba(0,0,0,0.85),
-    0 0 0 4px rgba(255,138,61,1),
-    0 0 0 5px rgba(0,0,0,0.2),
-    0 0 32px rgba(255,138,61, 1);
-  animation: helm-pulse-core 0.85s ease-in-out infinite;
-}
-[data-helm-cursor].mode-thinking .helm-halo { opacity: 1; }
-[data-helm-cursor].mode-thinking .helm-ring { opacity: 0.75; transform: scale(1); animation: helm-ring-spin 1.6s linear infinite; border-style: dashed; }
-[data-helm-cursor].mode-thinking .helm-ring-2 { opacity: 0.45; transform: scale(1); animation: helm-ring-spin 2.4s linear infinite reverse; }
-[data-helm-cursor].mode-acting .helm-halo { opacity: 1; }
-[data-helm-cursor].mode-acting .helm-core {
-  box-shadow:
-    0 0 0 2px rgba(0,0,0,0.85),
-    0 0 0 4px rgba(255,138,61,1),
-    0 0 0 5px rgba(0,0,0,0.2),
-    0 0 28px rgba(255,138,61, 1);
-}
-[data-helm-cursor].mode-speaking .helm-halo { opacity: 1; }
-[data-helm-cursor].mode-speaking .helm-core { animation: helm-speak-bounce 0.35s ease-in-out infinite alternate; }
-[data-helm-cursor].personality-expressive { --core: 20px; }
-[data-helm-cursor].personality-expressive .helm-halo { left: -28px; top: -28px; width: 56px; height: 56px; }
-
-@keyframes helm-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
-@keyframes helm-ring-spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+/* Cursor visual removed — Helm navigates elements invisibly */
 @keyframes helm-pulse-core { 0%,100% { transform: scale(1.0); } 50% { transform: scale(1.25); } }
-@keyframes helm-speak-bounce { from { transform: scale(0.95); } to { transform: scale(1.15); } }
 
 /* Animated indicator helpers used in the orb and command bar */
 [data-helm-overlay] .helm-dots { display: inline-flex; gap: 3px; }
@@ -239,12 +157,6 @@
 [data-helm-overlay] .helm-textcmd-reply-text {
   flex: 1; color: #fbf9f5; font: 400 13px/1.5 var(--helm-font); min-width: 0;
 }
-[data-helm-overlay] .helm-textcmd-reply-x {
-  appearance: none; border: 0; background: transparent;
-  color: rgba(255,255,255,0.35); font-size: 14px; cursor: pointer;
-  padding: 0 2px; line-height: 1; flex: none;
-}
-[data-helm-overlay] .helm-textcmd-reply-x:hover { color: #fff; }
 
 /* When reply is visible, switch from pill to rounded-rect corners */
 [data-helm-textcmd].has-reply {
