@@ -101,6 +101,7 @@
 
   H.startRecognizer = function () {
     if (H.recognizer) { try { H.recognizer.stop(); } catch {} }
+    H._recStartedAt = Date.now();
     const rec = H.makeRecognizer({
       onInterim: (t) => {
         const busy = H.state.mode === "thinking" || H.state.mode === "acting" || H.state.mode === "speaking";
@@ -111,6 +112,7 @@
       },
       onFinal: H.handleFinal,
       onError: (e) => {
+        console.warn("[Helm] recognizer error:", e?.error || e);
         if (!e?.error || e.error === "no-speech" || e.error === "aborted") return;
         if (e.error === "not-allowed" || e.error === "service-not-allowed") {
           H.wantListening = false;
@@ -119,18 +121,20 @@
           H.update({ lastError: e.error, recOk: false });
         }
       },
-      onStart: () => H.update({ recOk: true, lastError: "" }),
+      onStart: () => { console.log("[Helm] recognizer started"); H.update({ recOk: true, lastError: "" }); },
       onEnd: () => {
+        const lived = Date.now() - (H._recStartedAt || 0);
+        console.log(`[Helm] recognizer ended after ${lived}ms`);
         H.update({ recOk: false });
-        // Restart after a longer gap so Chrome's tab mic indicator doesn't
-        // flash on/off. The getUserMedia stream (held in H._micStream) keeps
-        // the indicator solid while SpeechRecognition cycles underneath.
+        // If the recognizer keeps dying within ~1s of starting, something is
+        // wrong (mic conflict, another recognizer). Back off so we don't spin.
+        const backoff = lived < 1000 ? 2500 : 600;
         if (H.wantListening && !H._restartPending) {
           H._restartPending = true;
           setTimeout(() => {
             H._restartPending = false;
             if (H.wantListening) H.startRecognizer();
-          }, 800);
+          }, backoff);
         }
       },
     });
@@ -139,22 +143,22 @@
       return;
     }
     H.recognizer = rec;
-    try { rec.start(); } catch {}
+    try { rec.start(); }
+    catch (err) { console.warn("[Helm] rec.start() threw:", err); }
   };
 
   H.requestMicAndStart = async function (promptPermission = false) {
-    if (H._micStream) { H._micStream.getTracks().forEach(t => t.stop()); H._micStream = null; }
-    try {
-      // Always try to hold a getUserMedia stream — keeps the Chrome tab mic
-      // indicator solid instead of flashing every time SpeechRecognition cycles.
-      // On sites where mic is already granted this succeeds silently.
-      // On fresh origins with no permission, it will throw (handled below).
-      const perm = await navigator.permissions.query({ name: "microphone" }).catch(() => null);
-      if (perm?.state === "granted" || promptPermission) {
-        H._micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    if (promptPermission) {
+      // Trigger Chrome's mic-permission prompt, then RELEASE the stream
+      // immediately. Holding a getUserMedia stream open conflicts with
+      // webkitSpeechRecognition's own mic access and can stop it capturing
+      // audio. We only need getUserMedia to surface the permission dialog.
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+        s.getTracks().forEach(t => t.stop());
+      } catch {
+        console.warn("[Helm] mic permission denied or unavailable");
       }
-    } catch {
-      H._micStream = null; // denied — SpeechRecognition will surface "not-allowed"
     }
     H.wantListening = true;
     H.update({ mode: "idle", lastError: "" });
@@ -165,7 +169,6 @@
     H.wantListening = false;
     H.sessionActive = false;
     H._restartPending = false;
-    if (H._micStream) { H._micStream.getTracks().forEach(t => t.stop()); H._micStream = null; }
     try { H.recognizer?.stop(); } catch {}
     H.update({ mode: "offline" });
   };
