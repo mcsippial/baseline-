@@ -653,8 +653,15 @@
   }
 
   /* ---------- UI events ---------- */
-  enableBtn.addEventListener("click", () => { H.sessionActive = true; H.requestMicAndStart(true); });
-  orbBtn.addEventListener("click", () => H.stopAll());
+  enableBtn.addEventListener("click", () => {
+    H.sessionActive = true;
+    chrome.storage.local.set({ helmActive: true });
+    H.requestMicAndStart(true);
+  });
+  orbBtn.addEventListener("click", () => {
+    chrome.storage.local.set({ helmActive: false });
+    H.stopAll();
+  });
   // reply auto-dismisses on timer — no X button
 
   textcmdMic.addEventListener("click", () => {
@@ -732,9 +739,12 @@
       return;
     }
     render();
-    // Auto-start: no user gesture available so skip the permission prompt.
-    // If mic is already granted this succeeds; if not, the Enable button click
-    // will trigger getUserMedia with a real user gesture.
-    H.requestMicAndStart(false);
+    // Resume from previous session if user had Helm active before navigation.
+    // Setting sessionActive=true means no wake word needed — user can speak
+    // immediately just like before they navigated.
+    chrome.storage.local.get("helmActive", ({ helmActive }) => {
+      if (helmActive) H.sessionActive = true;
+      H.requestMicAndStart(false);
+    });
   });
 })();

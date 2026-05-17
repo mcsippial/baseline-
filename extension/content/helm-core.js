@@ -143,18 +143,18 @@
   };
 
   H.requestMicAndStart = async function (promptPermission = false) {
-    if (promptPermission) {
-      // Trigger Chrome's mic-permission dialog on first use, then keep the stream
-      // open. A live getUserMedia stream holds Chrome's tab mic indicator solid —
-      // without it the indicator flashes on/off every time SpeechRecognition
-      // cycles (every ~30-60s). Stream is stopped in stopAll.
-      if (H._micStream) H._micStream.getTracks().forEach(t => t.stop());
-      try {
+    if (H._micStream) { H._micStream.getTracks().forEach(t => t.stop()); H._micStream = null; }
+    try {
+      // Always try to hold a getUserMedia stream — keeps the Chrome tab mic
+      // indicator solid instead of flashing every time SpeechRecognition cycles.
+      // On sites where mic is already granted this succeeds silently.
+      // On fresh origins with no permission, it will throw (handled below).
+      const perm = await navigator.permissions.query({ name: "microphone" }).catch(() => null);
+      if (perm?.state === "granted" || promptPermission) {
         H._micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch {
-        H._micStream = null;
-        // denied — SpeechRecognition will surface "not-allowed" and go offline
       }
+    } catch {
+      H._micStream = null; // denied — SpeechRecognition will surface "not-allowed"
     }
     H.wantListening = true;
     H.update({ mode: "idle", lastError: "" });
