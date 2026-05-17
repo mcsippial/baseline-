@@ -5,7 +5,10 @@
  */
 (function () {
   if (window.__helm) return; // single-instance guard
+  const HELM_VERSION = "0.5.0";
+  console.log(`%c[Helm] content script v${HELM_VERSION} loaded`, "color:#ff8a3d;font-weight:bold");
   const H = window.__helm = {
+    version: HELM_VERSION,
     state: {
       mode: "offline",         // offline | idle | listening | thinking | acting | speaking
       recOk: false,
