@@ -94,6 +94,7 @@
   let followupTicker = null;
   let followupRemaining = 0;
   let saidTimer = null;
+  let barPinned = false;
   let listenTimer = null;
   let confirmTicker = null;
   H.pendingConfirm = null;
@@ -126,7 +127,9 @@
     } else {
       enableBtn.hidden = true;
       orbBtn.hidden = false;
-      textcmdEl.hidden = false;
+      // Show bar when active; otherwise only when user pinned it open
+      const autoShow = mode === "listening" || mode === "thinking" || mode === "acting" || mode === "speaking" || !replyEl.hidden;
+      textcmdEl.hidden = !barPinned && !autoShow;
 
       orbBtn.className =
         "helm-orb" +
@@ -156,12 +159,12 @@
       orbBtn.title = !recOk
         ? (lastError ? `Mic: ${lastError}` : "Starting mic…")
         : s.openMic
-          ? "Open mic · click to turn off"
+          ? "Open mic · click to turn off · Alt+Space for text"
           : H.sessionActive
-            ? "Session active — just speak · click to stop"
+            ? "Session active — just speak · click to stop · Alt+Space for text"
             : followupRemaining > 0
               ? `Follow-up · ${followupRemaining}s · click to stop`
-              : `Listening for "${wakeWordLabel()}" · click to stop`;
+              : `Listening for "${wakeWordLabel()}" · Alt+Space for text bar`;
     }
 
     // Text command bar state
@@ -513,6 +516,7 @@
   function hideReply() {
     replyEl.hidden = true;
     textcmdEl.classList.remove("has-reply");
+    if (!barPinned && H.state.mode === "idle") textcmdEl.hidden = true;
   }
   H.showSaid = showSaid;
 
@@ -590,15 +594,26 @@
     textcmdSubmit.hidden = !textcmdInput.value.trim();
   });
 
-  // Press "/" anywhere (when not in an input) to focus the command bar
+  // Alt+Space — toggle command bar open/closed
+  window.addEventListener("keydown", (e) => {
+    if (e.altKey && !e.ctrlKey && !e.metaKey && e.code === "Space" && !e.repeat && H.state.mode !== "offline") {
+      e.preventDefault();
+      barPinned = !barPinned;
+      render();
+      if (barPinned) textcmdInput.focus();
+    }
+  });
+
+  // Press "/" anywhere (when not in an input) to open + focus the command bar
   window.addEventListener("keydown", (e) => {
     if (e.key === "/" && !e.repeat
         && document.activeElement?.tagName !== "INPUT"
         && document.activeElement?.tagName !== "TEXTAREA"
         && !document.activeElement?.isContentEditable
-        && textcmdEl.style.display !== "none"
-        && !textcmdEl.hidden) {
+        && H.state.mode !== "offline") {
       e.preventDefault();
+      barPinned = true;
+      render();
       textcmdInput.focus();
     }
   });
