@@ -134,8 +134,8 @@
     } else {
       enableBtn.hidden = true;
       orbBtn.hidden = false;
-      // Show bar when active; otherwise only when user pinned it open
-      const autoShow = mode === "listening" || mode === "thinking" || mode === "acting" || mode === "speaking" || !replyEl.hidden;
+      // Only auto-show for replies; orb handles all other status
+      const autoShow = !replyEl.hidden;
       textcmdEl.hidden = !barPinned && !autoShow;
 
       orbBtn.className =
