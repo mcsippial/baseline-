@@ -4,7 +4,14 @@
  */
 (function () {
   if (window !== window.top) return; // don't mount overlay inside iframes
-  if (document.querySelector("[data-helm-overlay]")) return; // another instance already mounted
+  if (window.__helmMain) return;     // already mounted in this JS execution context
+  window.__helmMain = true;
+
+  // Remove any stale overlay left in the DOM by a previous extension instance
+  // (removing an extension doesn't clean up DOM; without this the new injection
+  //  would find the old dead overlay and bail, leaving mic non-functional)
+  document.querySelectorAll("[data-helm-overlay]").forEach(el => el.remove());
+
   const H = window.__helm;
   if (!H) return;
 
