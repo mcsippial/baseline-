@@ -4,11 +4,18 @@
  * Other helm-*.js files extend the same namespace.
  */
 (function () {
-  if (window.__helm) return; // single-instance guard
-  const HELM_VERSION = "0.5.0";
+  const HELM_VERSION = "0.6.0";
+  // If an older version is still running, stop it cleanly before we mount.
+  // This happens when Chrome re-injects new content scripts into an already-open
+  // tab but the old orphaned script's window.__helm is still alive.
+  if (window.__helm && window.__helm.version !== HELM_VERSION) {
+    try { window.__helm.stopAll?.(); } catch {}
+    delete window.__helm;
+  }
+  if (window.__helm) return; // same-version guard — already mounted
   console.log(`%c[Helm] content script v${HELM_VERSION} loaded`, "color:#ff8a3d;font-weight:bold");
   const H = window.__helm = {
-    version: HELM_VERSION,
+    version: HELM_VERSION, // used to detect stale instances on re-injection
     state: {
       mode: "offline",         // offline | idle | listening | thinking | acting | speaking
       recOk: false,
@@ -173,7 +180,7 @@
    * service worker is the single source of truth for which tab is focused;
    * it sets H._isMicOwner via the "helm:mic-owner" message. A tab may only
    * run the recognizer when it is BOTH the mic owner AND visible.            */
-  H._isMicOwner = (document.visibilityState === "visible"); // initial guess until background confirms
+  H._isMicOwner = false; // wait for background confirmation — never assume ownership at startup
 
   H.canRecord = function () {
     return H._isMicOwner === true && document.visibilityState === "visible";

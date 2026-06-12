@@ -308,7 +308,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
   if (msg?.type === "helm:am-i-mic-owner") {
-    getActiveTabId().then(id => sendResponse({ owner: !!sender.tab?.id && sender.tab.id === id }));
+    getActiveTabId().then(id => {
+      sendResponse({ owner: !!sender.tab?.id && sender.tab.id === id });
+      // A new content script just came online — re-broadcast so every tab
+      // gets a fresh ownership notification (handles cold-start race).
+      broadcastMicOwner();
+    });
     return true;
   }
   if (msg?.type === "helm:claude") {

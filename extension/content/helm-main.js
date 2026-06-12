@@ -4,12 +4,17 @@
  */
 (function () {
   if (window !== window.top) return; // don't mount overlay inside iframes
-  if (window.__helmMain) return;     // already mounted in this JS execution context
-  window.__helmMain = true;
 
-  // Remove any stale overlay left in the DOM by a previous extension instance
-  // (removing an extension doesn't clean up DOM; without this the new injection
-  //  would find the old dead overlay and bail, leaving mic non-functional)
+  const MAIN_VERSION = "0.6.0";
+  // If a stale version's overlay is in the DOM, remove it and let new code mount.
+  if (window.__helmMain && window.__helmMain !== MAIN_VERSION) {
+    document.querySelectorAll("[data-helm-overlay]").forEach(el => el.remove());
+    window.__helmMain = null;
+  }
+  if (window.__helmMain) return; // same version already mounted — nothing to do
+  window.__helmMain = MAIN_VERSION;
+
+  // Sweep any leftover overlay DOM from an orphaned previous instance.
   document.querySelectorAll("[data-helm-overlay]").forEach(el => el.remove());
 
   const H = window.__helm;
@@ -205,12 +210,17 @@
     if (msg?.type === "helm:mic-owner") H.setMicOwner?.(!!msg.owner);
   });
   // Ask the background who owns the mic right now (handles initial page load).
-  try {
-    chrome.runtime.sendMessage({ type: "helm:am-i-mic-owner" }, (r) => {
-      if (chrome.runtime.lastError) return;
-      H.setMicOwner?.(!!r?.owner);
-    });
-  } catch {}
+  function queryMicOwnership() {
+    try {
+      chrome.runtime.sendMessage({ type: "helm:am-i-mic-owner" }, (r) => {
+        if (chrome.runtime.lastError) return;
+        H.setMicOwner?.(!!r?.owner);
+      });
+    } catch {}
+  }
+  queryMicOwnership();
+  // Re-poll after 2 s in case the service worker was cold-starting and missed the first query.
+  setTimeout(queryMicOwnership, 2000);
 
   /* ---------- Push-to-talk via Space ---------- */
   window.addEventListener("keydown", (e) => {
